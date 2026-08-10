@@ -6,6 +6,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5";
   };
+  graphql_public: {
+    Tables: {
+      [_ in never]: never;
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json;
+          operationName?: string;
+          query?: string;
+          variables?: Json;
+        };
+        Returns: Json;
+      };
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
+  };
   public: {
     Tables: {
       course_mappings: {
@@ -50,13 +75,151 @@ export type Database = {
         };
         Relationships: [];
       };
+      evaluations: {
+        Row: {
+          course_id: string;
+          created_at: string;
+          evaluator_id: string | null;
+          feedback: string | null;
+          id: string;
+          rubric_scores: Json;
+          student_id: string | null;
+        };
+        Insert: {
+          course_id: string;
+          created_at?: string;
+          evaluator_id?: string | null;
+          feedback?: string | null;
+          id?: string;
+          rubric_scores?: Json;
+          student_id?: string | null;
+        };
+        Update: {
+          course_id?: string;
+          created_at?: string;
+          evaluator_id?: string | null;
+          feedback?: string | null;
+          id?: string;
+          rubric_scores?: Json;
+          student_id?: string | null;
+        };
+        Relationships: [];
+      };
+      kpi_subcategories: {
+        Row: {
+          created_at: string;
+          id: string;
+          kpi_id: string;
+          name: string;
+          obtain_grade: string | null;
+          score: number | null;
+          total_grade: number;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          kpi_id: string;
+          name: string;
+          obtain_grade?: string | null;
+          score?: number | null;
+          total_grade?: number;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          kpi_id?: string;
+          name?: string;
+          obtain_grade?: string | null;
+          score?: number | null;
+          total_grade?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "kpi_subcategories_kpi_id_fkey";
+            columns: ["kpi_id"];
+            isOneToOne: false;
+            referencedRelation: "venture_kpis";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      kpi_submissions: {
+        Row: {
+          created_at: string;
+          file_name: string;
+          id: string;
+          is_late: boolean;
+          kpi_id: string;
+          mime_type: string | null;
+          note: string | null;
+          size_bytes: number | null;
+          storage_path: string;
+          student_id: string;
+          subcategory_id: string | null;
+          submitted_at: string;
+          venture_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          file_name: string;
+          id?: string;
+          is_late?: boolean;
+          kpi_id: string;
+          mime_type?: string | null;
+          note?: string | null;
+          size_bytes?: number | null;
+          storage_path: string;
+          student_id?: string;
+          subcategory_id?: string | null;
+          submitted_at?: string;
+          venture_id: string;
+        };
+        Update: {
+          created_at?: string;
+          file_name?: string;
+          id?: string;
+          is_late?: boolean;
+          kpi_id?: string;
+          mime_type?: string | null;
+          note?: string | null;
+          size_bytes?: number | null;
+          storage_path?: string;
+          student_id?: string;
+          subcategory_id?: string | null;
+          submitted_at?: string;
+          venture_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "kpi_submissions_kpi_id_fkey";
+            columns: ["kpi_id"];
+            isOneToOne: false;
+            referencedRelation: "venture_kpis";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "kpi_submissions_subcategory_id_fkey";
+            columns: ["subcategory_id"];
+            isOneToOne: false;
+            referencedRelation: "kpi_subcategories";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "kpi_submissions_venture_id_fkey";
+            columns: ["venture_id"];
+            isOneToOne: false;
+            referencedRelation: "ventures";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       proposal: {
         Row: {
           created_at: string;
           email: string;
           id: number;
           name: string;
-          status: string | null;
+          status: Database["public"]["Enums"]["proposal_state"];
           subject: string;
           venture: string;
         };
@@ -65,7 +228,7 @@ export type Database = {
           email: string;
           id?: number;
           name: string;
-          status?: string | null;
+          status?: Database["public"]["Enums"]["proposal_state"];
           subject: string;
           venture: string;
         };
@@ -74,174 +237,158 @@ export type Database = {
           email?: string;
           id?: number;
           name?: string;
-          status?: string | null;
+          status?: Database["public"]["Enums"]["proposal_state"];
           subject?: string;
           venture?: string;
+        };
+        Relationships: [];
+      };
+      residency_applications: {
+        Row: {
+          created_at: string;
+          description: string | null;
+          id: string;
+          stage: string;
+          status: string;
+          user_id: string | null;
+          venture_name: string;
+        };
+        Insert: {
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          stage?: string;
+          status?: string;
+          user_id?: string | null;
+          venture_name: string;
+        };
+        Update: {
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          stage?: string;
+          status?: string;
+          user_id?: string | null;
+          venture_name?: string;
         };
         Relationships: [];
       };
       user_roles: {
         Row: {
           created_at: string;
+          email: string | null;
           id: string;
           role: Database["public"]["Enums"]["app_role"];
+          roll_no: string | null;
           user_id: string;
         };
         Insert: {
           created_at?: string;
+          email?: string | null;
           id?: string;
           role: Database["public"]["Enums"]["app_role"];
+          roll_no?: string | null;
           user_id: string;
         };
         Update: {
           created_at?: string;
+          email?: string | null;
           id?: string;
           role?: Database["public"]["Enums"]["app_role"];
+          roll_no?: string | null;
           user_id?: string;
-        };
-        Relationships: [];
-      };
-      ventures: {
-        Row: {
-          id: string;
-          user_id: string | null;
-          roll_no: string | null;
-          student_name: string;
-          subject: string;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id?: string | null;
-          roll_no?: string | null;
-          student_name: string;
-          subject: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string | null;
-          roll_no?: string | null;
-          student_name?: string;
-          subject?: string;
-          created_at?: string;
-          updated_at?: string;
         };
         Relationships: [];
       };
       venture_kpis: {
         Row: {
-          id: string;
-          venture_id: string;
-          name: string;
-          obtain_grade: string;
-          total_grade: number;
           created_at: string;
-        };
-        Insert: {
-          id?: string;
-          venture_id: string;
-          name: string;
-          obtain_grade: string;
-          total_grade?: number;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          venture_id?: string;
-          name?: string;
-          obtain_grade?: string;
-          total_grade?: number;
-          created_at?: string;
-        };
-        Relationships: [];
-      };
-      kpi_subcategories: {
-        Row: {
-          id: string;
-          kpi_id: string;
-          name: string;
-          obtain_grade: string;
-          total_grade: number;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          kpi_id: string;
-          name: string;
-          obtain_grade: string;
-          total_grade?: number;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          kpi_id?: string;
-          name?: string;
-          obtain_grade?: string;
-          total_grade?: number;
-          created_at?: string;
-        };
-        Relationships: [];
-      };
-      evaluations: {
-        Row: {
-          id: string;
-          student_id: string | null;
-          evaluator_id: string | null;
-          course_id: string;
-          rubric_scores: Json;
+          due_date: string | null;
           feedback: string | null;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          student_id?: string | null;
-          evaluator_id?: string | null;
-          course_id: string;
-          rubric_scores?: Json;
-          feedback?: string | null;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          student_id?: string | null;
-          evaluator_id?: string | null;
-          course_id?: string;
-          rubric_scores?: Json;
-          feedback?: string | null;
-          created_at?: string;
-        };
-        Relationships: [];
-      };
-      residency_applications: {
-        Row: {
           id: string;
-          user_id: string | null;
-          venture_name: string;
-          stage: string;
-          description: string | null;
-          status: string;
-          created_at: string;
+          is_locked: boolean;
+          locked_at: string | null;
+          locked_by: string | null;
+          name: string;
+          obtain_grade: string | null;
+          score: number | null;
+          scored_at: string | null;
+          scored_by: string | null;
+          total_grade: number;
+          venture_id: string;
         };
         Insert: {
-          id?: string;
-          user_id?: string | null;
-          venture_name: string;
-          stage?: string;
-          description?: string | null;
-          status?: string;
           created_at?: string;
+          due_date?: string | null;
+          feedback?: string | null;
+          id?: string;
+          is_locked?: boolean;
+          locked_at?: string | null;
+          locked_by?: string | null;
+          name: string;
+          obtain_grade?: string | null;
+          score?: number | null;
+          scored_at?: string | null;
+          scored_by?: string | null;
+          total_grade?: number;
+          venture_id: string;
         };
         Update: {
-          id?: string;
-          user_id?: string | null;
-          venture_name?: string;
-          stage?: string;
-          description?: string | null;
-          status?: string;
           created_at?: string;
+          due_date?: string | null;
+          feedback?: string | null;
+          id?: string;
+          is_locked?: boolean;
+          locked_at?: string | null;
+          locked_by?: string | null;
+          name?: string;
+          obtain_grade?: string | null;
+          score?: number | null;
+          scored_at?: string | null;
+          scored_by?: string | null;
+          total_grade?: number;
+          venture_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "venture_kpis_venture_id_fkey";
+            columns: ["venture_id"];
+            isOneToOne: false;
+            referencedRelation: "ventures";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      ventures: {
+        Row: {
+          created_at: string;
+          id: string;
+          mentor_id: string | null;
+          roll_no: string | null;
+          student_name: string;
+          subject: string;
+          updated_at: string;
+          user_id: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          mentor_id?: string | null;
+          roll_no?: string | null;
+          student_name: string;
+          subject: string;
+          updated_at?: string;
+          user_id?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          mentor_id?: string | null;
+          roll_no?: string | null;
+          student_name?: string;
+          subject?: string;
+          updated_at?: string;
+          user_id?: string | null;
         };
         Relationships: [];
       };
@@ -250,6 +397,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      can_read_venture: {
+        Args: { v_roll_no: string; v_student_name: string; v_user_id: string };
+        Returns: boolean;
+      };
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"];
@@ -258,9 +409,19 @@ export type Database = {
         Returns: boolean;
       };
       is_admin: { Args: { _user_id: string }; Returns: boolean };
+      is_board: { Args: never; Returns: boolean };
+      is_mentor_of_venture: { Args: { _venture_id: string }; Returns: boolean };
+      is_staff: { Args: never; Returns: boolean };
+      is_venture_student: { Args: { _venture_id: string }; Returns: boolean };
+      kpi_parent: {
+        Args: { _kpi_id: string };
+        Returns: Record<string, unknown>;
+      };
+      path_venture_id: { Args: { _name: string }; Returns: string };
     };
     Enums: {
-      app_role: "super_admin" | "admin" | "student";
+      app_role: "admin" | "academic_board" | "mentor" | "student";
+      proposal_state: "pending" | "rejected" | "accepted";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -384,9 +545,13 @@ export type CompositeTypes<
     : never;
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
-      app_role: ["super_admin", "admin", "student"],
+      app_role: ["admin", "academic_board", "mentor", "student"],
+      proposal_state: ["pending", "rejected", "accepted"],
     },
   },
 } as const;

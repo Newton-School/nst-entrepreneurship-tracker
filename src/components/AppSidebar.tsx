@@ -37,9 +37,16 @@ import {
   Camera,
 } from "lucide-react";
 import { ApplyNowButton } from "./ApplyNowButton";
-import { useAuth } from "@/lib/auth";
+import { useAuth, type Role } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+
+const ROLE_LABEL: Record<Role, string> = {
+  admin: "Admin",
+  academic_board: "Board",
+  mentor: "Mentor",
+  student: "Student",
+};
 
 const dashboard = [
   { title: "Overview", url: "/", icon: LayoutDashboard },
@@ -75,7 +82,7 @@ const governance = [
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isActive = (p: string) => pathname === p;
-  const { user, isAdmin, isSuperAdmin, signOut } = useAuth();
+  const { user, role, isStaff, isStudent, signOut } = useAuth();
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -183,21 +190,23 @@ export function AppSidebar() {
             <div className="space-y-1.5">
               <div className="flex items-center justify-between gap-2">
                 <p className="truncate font-mono text-[11px] text-foreground">{user.email}</p>
-                {isSuperAdmin ? (
+                {role === "admin" || role === "academic_board" ? (
                   <Badge className="bg-primary/30 font-mono text-[9px] text-primary">
                     <ShieldCheck className="mr-1 h-2.5 w-2.5" />
-                    Super
+                    {ROLE_LABEL[role]}
                   </Badge>
-                ) : isAdmin ? (
-                  <Badge className="bg-primary/20 font-mono text-[9px] text-primary">Admin</Badge>
+                ) : role === "mentor" ? (
+                  <Badge className="bg-primary/20 font-mono text-[9px] text-primary">
+                    {ROLE_LABEL.mentor}
+                  </Badge>
                 ) : (
                   <Badge variant="outline" className="font-mono text-[9px]">
-                    Student
+                    {role ? ROLE_LABEL[role] : "No role"}
                   </Badge>
                 )}
               </div>
 
-              {isSuperAdmin || isAdmin ? (
+              {isStaff ? (
                 <Link
                   to="/manageResult"
                   className="flex items-center gap-2 h-7 w-full justify-start px-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground"
@@ -235,7 +244,7 @@ export function AppSidebar() {
           )}
         </div>
 
-        {!(isAdmin || isSuperAdmin) && <ApplyNowButton className="w-full justify-center" />}
+        {isStudent && <ApplyNowButton className="w-full justify-center" />}
         <p className="mt-1 text-center font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground/60">
           v1 · master framework
         </p>

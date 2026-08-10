@@ -29,6 +29,8 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { GradeDialog, type GradeTarget } from "@/components/kpi/GradeDialog";
+import { canAddKpi, canEditKpi, canManageVentures, type Actor } from "@/lib/permissions";
 
 interface ResultSearch {
   studentId?: string;
@@ -56,6 +58,7 @@ interface Subcategory {
   id?: string;
   name: string;
   obtainGrade: string;
+  score?: number | null;
   totalGrade: number;
 }
 
@@ -64,6 +67,10 @@ interface KPI {
   name: string;
   obtainGrade: string;
   totalGrade: number;
+  score: number | null;
+  dueDate: string | null;
+  feedback: string | null;
+  isLocked: boolean;
   subcategories?: Subcategory[];
 }
 
@@ -72,36 +79,70 @@ interface Venture {
   subject: string;
   studentName: string;
   rollNo: string;
+  mentorId: string | null;
   kpis: KPI[];
+}
+
+interface RawVenture {
+  id: string;
+  subject: string;
+  student_name: string;
+  roll_no: string | null;
+  user_id: string | null;
+  mentor_id: string | null;
+  created_at: string;
+  venture_kpis: {
+    id: string;
+    name: string;
+    obtain_grade: string | null;
+    total_grade: number | string;
+    score: number | string | null;
+    due_date: string | null;
+    feedback: string | null;
+    is_locked: boolean;
+    created_at: string;
+    kpi_subcategories: {
+      id: string;
+      name: string;
+      obtain_grade: string | null;
+      total_grade: number | string;
+      score: number | string | null;
+      created_at: string;
+    }[];
+  }[];
 }
 
 function Page() {
   const { studentId } = Route.useSearch();
   const navigate = useNavigate();
-  const { user, isAdmin, isSuperAdmin, loading: authLoading } = useAuth();
-  const canEdit = isAdmin || isSuperAdmin;
+  const { user, role, isStaff, status } = useAuth();
+  const authLoading = status === "loading";
+  const canEdit = isStaff;
 
   const [ventures, setVentures] = useState<Venture[]>([]);
   const [loading, setLoading] = useState(true);
   const [openRows, setOpenRows] = useState<Record<string, boolean>>({});
   const [accessDeniedMessage, setAccessDeniedMessage] = useState<string | null>(null);
 
-  // Add Venture Modal State
   const [ventureModalOpen, setVentureModalOpen] = useState(false);
   const [ventureSubject, setVentureSubject] = useState("");
   const [ventureStudentName, setVentureStudentName] = useState("");
   const [ventureRollNo, setVentureRollNo] = useState("");
   const [submittingVenture, setSubmittingVenture] = useState(false);
 
-  // Add/Edit KPI Modal State
   const [kpiModalOpen, setKpiModalOpen] = useState(false);
   const [editingKpiId, setEditingKpiId] = useState<string | null>(null);
   const [targetVentureId, setTargetVentureId] = useState<string>("");
   const [kpiName, setKpiName] = useState("");
-  const [kpiObtain, setKpiObtain] = useState("");
   const [kpiTotal, setKpiTotal] = useState<number>(10);
+  const [kpiDueDate, setKpiDueDate] = useState("");
   const [subgradesList, setSubgradesList] = useState<Subcategory[]>([]);
   const [submitting, setSubmitting] = useState(false);
+
+  const [gradeTarget, setGradeTarget] = useState<GradeTarget | null>(null);
+  const [gradeOpen, setGradeOpen] = useState(false);
+
+  const actor: Actor | null = user && role ? { userId: user.id, role } : null;
 
   useEffect(() => {
     if (!authLoading) {
@@ -117,62 +158,39 @@ function Page() {
     setLoading(true);
     setAccessDeniedMessage(null);
     try {
-      let userRollNo: string | null = null;
-      if (user) {
-        const { data: userRole } = await supabase
-          .from("user_roles")
-          .select("*")
-          .eq("user_id", user.id)
-          .maybeSingle();
-        userRollNo = (userRole as any)?.roll_no || null;
-      }
-
       let query = supabase
         .from("ventures")
-        .select(`
+        .select(
+          `
           id,
           subject,
           student_name,
           roll_no,
           user_id,
+          mentor_id,
           created_at,
           venture_kpis (
             id,
             name,
             obtain_grade,
             total_grade,
+            score,
+            due_date,
+            feedback,
+            is_locked,
             created_at,
             kpi_subcategories (
               id,
               name,
               obtain_grade,
               total_grade,
+              score,
               created_at
             )
           )
-        `)
+        `,
+        )
         .order("created_at", { ascending: true });
-
-      if (!canEdit && user) {
-        const orConditions: string[] = [`user_id.eq.${user.id}`];
-
-        if (userRollNo && userRollNo.trim()) {
-          orConditions.push(`roll_no.ilike.${userRollNo.trim()}`);
-          orConditions.push(`student_name.ilike.${userRollNo.trim()}`);
-        }
-        if (user.email && user.email.trim()) {
-          orConditions.push(`roll_no.ilike.${user.email.trim()}`);
-          orConditions.push(`student_name.ilike.${user.email.trim()}`);
-        }
-        if (user.user_metadata?.roll_no) {
-          orConditions.push(`roll_no.ilike.${String(user.user_metadata.roll_no).trim()}`);
-        }
-        if (user.user_metadata?.full_name) {
-          orConditions.push(`student_name.ilike.${String(user.user_metadata.full_name).trim()}`);
-        }
-
-        query = query.or(orConditions.join(","));
-      }
 
       if (studentId) {
         query = query.eq("id", studentId);
@@ -190,9 +208,7 @@ function Page() {
 
       if (!venturesData || venturesData.length === 0) {
         if (studentId && !canEdit) {
-          setAccessDeniedMessage(
-            "Access Denied: You are only authorized to view your own result.",
-          );
+          setAccessDeniedMessage("Access Denied: You are only authorized to view your own result.");
           toast.error("Access Denied: You can only view your own result.");
         }
         setVentures([]);
@@ -200,29 +216,32 @@ function Page() {
         return;
       }
 
-      const formattedVentures: Venture[] = (venturesData as any[]).map((v) => {
-        const sortedKpis = (v.venture_kpis || []).sort(
-          (a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-        );
+      const byCreatedAt = (a: { created_at: string }, b: { created_at: string }) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
 
-        const vKpis: KPI[] = sortedKpis.map((k: any) => {
-          const sortedSubs = (k.kpi_subcategories || []).sort(
-            (a: any, b: any) =>
-              new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-          );
+      const formattedVentures: Venture[] = (venturesData as RawVenture[]).map((v) => {
+        const sortedKpis = (v.venture_kpis || []).slice().sort(byCreatedAt);
 
-          const kSubs: Subcategory[] = sortedSubs.map((s: any) => ({
+        const vKpis: KPI[] = sortedKpis.map((k) => {
+          const sortedSubs = (k.kpi_subcategories || []).slice().sort(byCreatedAt);
+
+          const kSubs: Subcategory[] = sortedSubs.map((s) => ({
             id: s.id,
             name: s.name,
-            obtainGrade: s.obtain_grade,
+            obtainGrade: s.obtain_grade ?? "",
+            score: s.score === null || s.score === undefined ? null : Number(s.score),
             totalGrade: Number(s.total_grade),
           }));
 
           return {
             id: k.id,
             name: k.name,
-            obtainGrade: k.obtain_grade,
+            obtainGrade: k.obtain_grade ?? "",
             totalGrade: Number(k.total_grade),
+            score: k.score === null || k.score === undefined ? null : Number(k.score),
+            dueDate: k.due_date ?? null,
+            feedback: k.feedback ?? null,
+            isLocked: Boolean(k.is_locked),
             subcategories: kSubs.length > 0 ? kSubs : undefined,
           };
         });
@@ -232,6 +251,7 @@ function Page() {
           subject: v.subject,
           studentName: v.student_name,
           rollNo: v.roll_no || "",
+          mentorId: v.mentor_id ?? null,
           kpis: vKpis,
         };
       });
@@ -316,8 +336,8 @@ function Page() {
     setEditingKpiId(null);
     setTargetVentureId(ventureId);
     setKpiName("");
-    setKpiObtain("");
     setKpiTotal(10);
+    setKpiDueDate("");
     setSubgradesList([]);
     setKpiModalOpen(true);
   };
@@ -326,8 +346,8 @@ function Page() {
     setEditingKpiId(kpi.id);
     setTargetVentureId(ventureId);
     setKpiName(kpi.name);
-    setKpiObtain(kpi.obtainGrade);
     setKpiTotal(kpi.totalGrade);
+    setKpiDueDate(kpi.dueDate ? kpi.dueDate.slice(0, 10) : "");
     setSubgradesList(kpi.subcategories ? kpi.subcategories.map((s) => ({ ...s })) : []);
     setKpiModalOpen(true);
   };
@@ -362,21 +382,21 @@ function Page() {
       .filter((s) => s.name.trim().length > 0)
       .map((s) => ({
         name: s.name.trim(),
-        obtainGrade: s.obtainGrade.trim() || `${s.totalGrade}/${s.totalGrade}`,
         totalGrade: Number(s.totalGrade) || 10,
       }));
 
-    try {
-      const obtainGradeVal = kpiObtain.trim() || `${kpiTotal}/${kpiTotal}`;
+    // A KPI is created unscored. It used to default to `${total}/${total}`, which
+    // awarded full marks to every new KPI before anyone had looked at it.
+    const dueIso = kpiDueDate ? new Date(`${kpiDueDate}T23:59:59`).toISOString() : null;
 
+    try {
       if (editingKpiId) {
-        // --- EDIT EXISTING KPI ---
         const { error: kpiErr } = await supabase
           .from("venture_kpis")
           .update({
             name: kpiName.trim(),
-            obtain_grade: obtainGradeVal,
             total_grade: Number(kpiTotal) || 10,
+            due_date: dueIso,
           })
           .eq("id", editingKpiId);
 
@@ -385,56 +405,41 @@ function Page() {
           return;
         }
 
-        // Replace subcategories
-        await supabase.from("kpi_subcategories").delete().eq("kpi_id", editingKpiId);
+        const { error: delErr } = await supabase
+          .from("kpi_subcategories")
+          .delete()
+          .eq("kpi_id", editingKpiId);
+        if (delErr) {
+          toast.error(`Could not replace subgrades: ${delErr.message}`);
+          return;
+        }
 
         if (validSubgrades.length > 0) {
-          await supabase.from("kpi_subcategories").insert(
+          const { error: insErr } = await supabase.from("kpi_subcategories").insert(
             validSubgrades.map((sub) => ({
               kpi_id: editingKpiId,
               name: sub.name,
-              obtain_grade: sub.obtainGrade,
               total_grade: sub.totalGrade,
             })),
           );
-        }
-
-        // Update local state
-        const updatedKpi: KPI = {
-          id: editingKpiId,
-          name: kpiName.trim(),
-          obtainGrade: obtainGradeVal,
-          totalGrade: Number(kpiTotal) || 10,
-          subcategories: validSubgrades.length > 0 ? validSubgrades : undefined,
-        };
-
-        setVentures((prev) =>
-          prev.map((v) =>
-            v.id === targetVentureId
-              ? {
-                  ...v,
-                  kpis: v.kpis.map((k) => (k.id === editingKpiId ? updatedKpi : k)),
-                }
-              : v,
-          ),
-        );
-
-        if (validSubgrades.length > 0) {
+          if (insErr) {
+            toast.error(`Could not save subgrades: ${insErr.message}`);
+            return;
+          }
           setOpenRows((prev) => ({ ...prev, [editingKpiId]: true }));
         }
 
         setKpiModalOpen(false);
-        toast.success(`KPI "${updatedKpi.name}" updated successfully.`);
+        toast.success(`KPI "${kpiName.trim()}" updated.`);
       } else {
-        // --- ADD NEW KPI ---
         const { data: kpiInsertData, error: kpiErr } = await supabase
           .from("venture_kpis")
           .insert([
             {
               venture_id: targetVentureId,
               name: kpiName.trim(),
-              obtain_grade: obtainGradeVal,
               total_grade: Number(kpiTotal) || 10,
+              due_date: dueIso,
             },
           ])
           .select()
@@ -448,47 +453,25 @@ function Page() {
         const createdKpiId = kpiInsertData.id;
 
         if (validSubgrades.length > 0) {
-          await supabase.from("kpi_subcategories").insert(
+          const { error: insErr } = await supabase.from("kpi_subcategories").insert(
             validSubgrades.map((sub) => ({
               kpi_id: createdKpiId,
               name: sub.name,
-              obtain_grade: sub.obtainGrade,
               total_grade: sub.totalGrade,
             })),
           );
-        }
-
-        // Update local state instantly
-        const newKpi: KPI = {
-          id: createdKpiId,
-          name: kpiName.trim(),
-          obtainGrade: obtainGradeVal,
-          totalGrade: Number(kpiTotal) || 10,
-          subcategories: validSubgrades,
-        };
-
-        setVentures((prev) =>
-          prev.map((v) =>
-            v.id === targetVentureId
-              ? {
-                  ...v,
-                  kpis: [...v.kpis, newKpi],
-                }
-              : v,
-          ),
-        );
-
-        if (validSubgrades.length > 0) {
-          setOpenRows((prev) => ({ ...prev, [createdKpiId]: true }));
+          if (insErr) {
+            toast.error(`KPI created but subgrades failed: ${insErr.message}`);
+          } else {
+            setOpenRows((prev) => ({ ...prev, [createdKpiId]: true }));
+          }
         }
 
         setKpiModalOpen(false);
-        toast.success(
-          `KPI "${newKpi.name}" added successfully${
-            validSubgrades.length > 0 ? ` with ${validSubgrades.length} subgrades` : ""
-          }.`,
-        );
+        toast.success(`KPI "${kpiName.trim()}" added.`);
       }
+
+      await fetchVentureData();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
 
@@ -545,9 +528,7 @@ function Page() {
             <h2 className="font-mono text-xl tracking-tight text-foreground font-semibold">
               Unauthorized Result Access
             </h2>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              {accessDeniedMessage}
-            </p>
+            <p className="text-xs text-muted-foreground leading-relaxed">{accessDeniedMessage}</p>
             <div className="pt-2">
               <Link to="/result">
                 <Button className="font-mono text-xs uppercase tracking-wider">
@@ -578,7 +559,7 @@ function Page() {
                   </Button>
                 </Link>
               )}
-              {canEdit && (
+              {actor && canManageVentures(actor) && (
                 <Button
                   onClick={() => setVentureModalOpen(true)}
                   className="font-mono text-xs uppercase tracking-wider cursor-pointer"
@@ -625,26 +606,28 @@ function Page() {
                   )}
                 </div>
 
-                {canEdit && (
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
+                  {actor && canAddKpi(actor, venture.mentorId) && (
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleOpenAddKpi(venture.id)}
-                      className="font-mono text-xs border-primary/30 text-primary cursor-pointer"
+                      className="cursor-pointer border-primary/30 font-mono text-xs text-primary"
                     >
                       <Plus className="mr-1 h-3.5 w-3.5" /> Add KPI
                     </Button>
+                  )}
+                  {actor && canManageVentures(actor) && (
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDeleteVenture(venture.id, venture.subject)}
-                      className="text-muted-foreground hover:text-destructive cursor-pointer"
+                      className="cursor-pointer text-muted-foreground hover:text-destructive"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
               <section className="glass-strong overflow-hidden rounded-2xl">
@@ -652,7 +635,7 @@ function Page() {
                   {/* Header */}
                   <div className="grid grid-cols-12 gap-3 border-b border-border/50 bg-background/40 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
                     <div className="col-span-7 sm:col-span-8">KPI</div>
-                    <div className="col-span-2">Obtained</div>
+                    <div className="col-span-2">Score</div>
                     <div className="col-span-2 sm:col-span-1">Total</div>
                     {canEdit && <div className="col-span-1 text-right">Action</div>}
                   </div>
@@ -661,9 +644,9 @@ function Page() {
                   {venture.kpis.length === 0 ? (
                     <div className="p-6 text-center text-xs font-mono text-muted-foreground">
                       No KPIs added for this venture yet.
-                      {canEdit && (
+                      {actor && canAddKpi(actor, venture.mentorId) && (
                         <span
-                          className="block mt-1 text-primary cursor-pointer hover:underline"
+                          className="mt-1 block cursor-pointer text-primary hover:underline"
                           onClick={() => handleOpenAddKpi(venture.id)}
                         >
                           + Add the first KPI
@@ -676,6 +659,16 @@ function Page() {
                         kpi.subcategories && kpi.subcategories.length > 0,
                       );
                       const isOpen = Boolean(openRows[kpi.id]);
+                      const kpiCtx = {
+                        ventureMentorId: venture.mentorId,
+                        isLocked: kpi.isLocked,
+                      };
+                      const mayEdit = actor ? canEditKpi(actor, kpiCtx) : false;
+                      const overdue =
+                        kpi.dueDate !== null &&
+                        !kpi.isLocked &&
+                        kpi.score === null &&
+                        new Date(kpi.dueDate).getTime() < Date.now();
 
                       return (
                         <div
@@ -697,42 +690,85 @@ function Page() {
                                     <ChevronRight className="h-4 w-4" />
                                   ))}
                                 <p className="font-mono text-sm">{kpi.name}</p>
+                                {kpi.isLocked && (
+                                  <Lock className="h-3 w-3 shrink-0 text-amber-400" />
+                                )}
+                              </div>
+                              <div className="mt-0.5 flex flex-wrap items-center gap-2 pl-6 font-mono text-[10px] text-muted-foreground/70">
+                                {kpi.dueDate && (
+                                  <span className={overdue ? "text-amber-400" : undefined}>
+                                    Due {new Date(kpi.dueDate).toLocaleDateString()}
+                                  </span>
+                                )}
+                                {kpi.score === null && !kpi.isLocked && <span>Not scored</span>}
                               </div>
                             </div>
-                            <div className="col-span-2 text-xs font-mono text-muted-foreground">
-                              {kpi.obtainGrade}
+                            <div className="col-span-2 font-mono text-xs text-muted-foreground">
+                              {kpi.score ?? "—"}
                             </div>
-                            <div className="col-span-2 sm:col-span-1 text-xs font-mono text-muted-foreground">
+                            <div className="col-span-2 font-mono text-xs text-muted-foreground sm:col-span-1">
                               {kpi.totalGrade}
                             </div>
 
                             {canEdit && (
-                              <div className="col-span-1 text-right flex items-center justify-end gap-1">
+                              <div className="col-span-1 flex items-center justify-end gap-1 text-right">
                                 <button
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
+                                    setGradeTarget({
+                                      kpiId: kpi.id,
+                                      ventureId: venture.id,
+                                      name: kpi.name,
+                                      score: kpi.score,
+                                      totalGrade: kpi.totalGrade,
+                                      feedback: kpi.feedback,
+                                      isLocked: kpi.isLocked,
+                                      ventureMentorId: venture.mentorId,
+                                    });
+                                    setGradeOpen(true);
+                                  }}
+                                  className="cursor-pointer p-1 text-muted-foreground transition-colors hover:text-primary"
+                                  title="Evaluate"
+                                >
+                                  <ShieldCheck className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={!mayEdit}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
                                     handleOpenEditKpi(kpi, venture.id);
                                   }}
-                                  className="text-muted-foreground hover:text-foreground transition-colors p-1 cursor-pointer"
-                                  title="Edit KPI"
+                                  className="cursor-pointer p-1 text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+                                  title={mayEdit ? "Edit KPI" : "Locked or not your mentee"}
                                 >
                                   <Pencil className="h-3.5 w-3.5" />
                                 </button>
                                 <button
                                   type="button"
+                                  disabled={!mayEdit}
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleDeleteKpi(kpi.id, kpi.name, venture.id);
                                   }}
-                                  className="text-muted-foreground hover:text-destructive transition-colors p-1 cursor-pointer"
-                                  title="Delete KPI"
+                                  className="cursor-pointer p-1 text-muted-foreground transition-colors hover:text-destructive disabled:cursor-not-allowed disabled:opacity-30"
+                                  title={mayEdit ? "Delete KPI" : "Locked or not your mentee"}
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </button>
                               </div>
                             )}
                           </div>
+
+                          {kpi.feedback && (
+                            <div className="border-t border-border/10 bg-background/20 px-5 py-3 pl-11">
+                              <p className="font-mono text-[11px] text-muted-foreground">
+                                <span className="text-muted-foreground/60">Feedback: </span>
+                                {kpi.feedback}
+                              </p>
+                            </div>
+                          )}
 
                           {hasSubcategories && isOpen && (
                             <div className="bg-background/20 pl-6 border-t border-border/10">
@@ -741,8 +777,10 @@ function Page() {
                                   key={sub.id || sIdx}
                                   className="grid grid-cols-12 gap-3 px-5 py-2 text-[11px] font-mono text-muted-foreground border-b border-border/5 last:border-0"
                                 >
-                                  <div className="col-span-7 sm:col-span-8 italic">└ {sub.name}</div>
-                                  <div className="col-span-2">{sub.obtainGrade}</div>
+                                  <div className="col-span-7 sm:col-span-8 italic">
+                                    └ {sub.name}
+                                  </div>
+                                  <div className="col-span-2">{sub.score ?? "—"}</div>
                                   <div className="col-span-3 sm:col-span-2">{sub.totalGrade}</div>
                                 </div>
                               ))}
@@ -836,12 +874,12 @@ function Page() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-                    Obtained Grade / Marks
+                    Due Date
                   </Label>
                   <Input
-                    placeholder="e.g. 8.5/10"
-                    value={kpiObtain}
-                    onChange={(e) => setKpiObtain(e.target.value)}
+                    type="date"
+                    value={kpiDueDate}
+                    onChange={(e) => setKpiDueDate(e.target.value)}
                     className="bg-background/40 font-mono text-sm"
                   />
                 </div>
@@ -887,23 +925,11 @@ function Page() {
                         key={idx}
                         className="grid grid-cols-12 gap-2 items-center rounded-lg border border-border/40 bg-background/30 p-2"
                       >
-                        <div className="col-span-5">
+                        <div className="col-span-8">
                           <Input
                             placeholder="Subgrade name"
                             value={sub.name}
-                            onChange={(e) =>
-                              handleUpdateDraftSubgrade(idx, "name", e.target.value)
-                            }
-                            className="h-8 bg-background/50 font-mono text-xs"
-                          />
-                        </div>
-                        <div className="col-span-3">
-                          <Input
-                            placeholder="Obtained (e.g. 4)"
-                            value={sub.obtainGrade}
-                            onChange={(e) =>
-                              handleUpdateDraftSubgrade(idx, "obtainGrade", e.target.value)
-                            }
+                            onChange={(e) => handleUpdateDraftSubgrade(idx, "name", e.target.value)}
                             className="h-8 bg-background/50 font-mono text-xs"
                           />
                         </div>
@@ -913,11 +939,7 @@ function Page() {
                             placeholder="Total (e.g. 10)"
                             value={sub.totalGrade}
                             onChange={(e) =>
-                              handleUpdateDraftSubgrade(
-                                idx,
-                                "totalGrade",
-                                Number(e.target.value),
-                              )
+                              handleUpdateDraftSubgrade(idx, "totalGrade", Number(e.target.value))
                             }
                             className="h-8 bg-background/50 font-mono text-xs"
                           />
@@ -958,6 +980,14 @@ function Page() {
             </form>
           </DialogContent>
         </Dialog>
+
+        <GradeDialog
+          target={gradeTarget}
+          open={gradeOpen}
+          onOpenChange={setGradeOpen}
+          actor={actor}
+          onSaved={fetchVentureData}
+        />
       </main>
     </>
   );

@@ -12,8 +12,6 @@ const isBoard = (a: Actor) => a.role === "admin" || a.role === "academic_board";
 const isMentorOf = (a: Actor, ventureMentorId: string | null) =>
   a.role === "mentor" && ventureMentorId !== null && ventureMentorId === a.userId;
 
-export const isStaff = (a: Actor) => a.role !== "student";
-
 export function canAddKpi(a: Actor, ventureMentorId: string | null): boolean {
   return isBoard(a) || isMentorOf(a, ventureMentorId);
 }
@@ -21,9 +19,6 @@ export function canAddKpi(a: Actor, ventureMentorId: string | null): boolean {
 export function canEditKpi(a: Actor, ctx: KpiContext): boolean {
   return isBoard(a) || (isMentorOf(a, ctx.ventureMentorId) && !ctx.isLocked);
 }
-
-export const canScoreKpi = canEditKpi;
-export const canDeleteKpi = canEditKpi;
 
 export function canLockKpi(a: Actor, ctx: KpiContext): boolean {
   return !ctx.isLocked && (isBoard(a) || isMentorOf(a, ctx.ventureMentorId));
@@ -38,7 +33,7 @@ export function canManageVentures(a: Actor): boolean {
 }
 
 export function canReviewProposal(a: Actor): boolean {
-  return isStaff(a);
+  return a.role !== "student";
 }
 
 export function resolveMentorForAccept(a: Actor, pickedMentorId: string | null): string | null {

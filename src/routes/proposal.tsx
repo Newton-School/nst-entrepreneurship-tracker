@@ -3,8 +3,21 @@ import { TopBar } from "@/components/TopBar";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
+import {
+  canReviewProposal,
+  mustPickMentorToAccept,
+  resolveMentorForAccept,
+  type Actor,
+} from "@/lib/permissions";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Loader2, CheckCircle2, XCircle, Clock, Check, X } from "lucide-react";
 
@@ -29,17 +42,42 @@ export const Route = createFileRoute("/proposal")({
   component: Page,
 });
 
+type Mentor = { user_id: string; email: string | null };
+
+const mentorLabel = (m?: Mentor) => m?.email ?? "unknown";
+
 function Page() {
   const initialData = Route.useLoaderData();
   const [proposals, setProposals] = useState(initialData);
   const [loadingId, setLoadingId] = useState<number | null>(null);
+  const [mentors, setMentors] = useState<Mentor[]>([]);
+  const [mentorChoice, setMentorChoice] = useState<Record<number, string>>({});
 
-  const { isAdmin, isSuperAdmin } = useAuth();
-  const canManage = isAdmin || isSuperAdmin;
+  const { role, user } = useAuth();
+
+  const actor: Actor | null = user && role ? { userId: user.id, role } : null;
+  const canManage = actor !== null && canReviewProposal(actor);
+  const mustPickMentor = actor !== null && mustPickMentorToAccept(actor);
 
   useEffect(() => {
     fetchProposals();
   }, []);
+
+  useEffect(() => {
+    if (!mustPickMentor) return;
+    supabase
+      .from("user_roles")
+      .select("user_id, email")
+      .eq("role", "mentor")
+      .order("email")
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("Error loading mentors:", error);
+          return;
+        }
+        setMentors(data ?? []);
+      });
+  }, [mustPickMentor]);
 
   const fetchProposals = async () => {
     const { data, error } = await supabase
@@ -53,6 +91,17 @@ function Page() {
   };
 
   const handleApproval = async (accepted: boolean, proposal_id: number) => {
+    if (!canManage || !actor) return;
+
+    let mentorId: string | null = null;
+    if (accepted) {
+      mentorId = resolveMentorForAccept(actor, mentorChoice[proposal_id] ?? null);
+      if (!mentorId) {
+        toast.error("Assign a mentor before accepting this proposal.");
+        return;
+      }
+    }
+
     const status = accepted ? "accepted" : "rejected";
     setLoadingId(proposal_id);
 
@@ -90,6 +139,7 @@ function Page() {
           const { error: vError } = await supabase.from("ventures").insert([
             {
               user_id: matchedUserId,
+              mentor_id: mentorId,
               student_name: target.name,
               subject: target.subject || target.venture || "Entrepreneurship Venture",
               roll_no: target.email ? target.email.trim() : `${target.id}`,
@@ -99,8 +149,12 @@ function Page() {
           if (vError) {
             console.error("Auto venture creation notice:", vError.message);
           } else {
+            const mentorNote =
+              mentorId === actor.userId
+                ? "You are assigned as mentor."
+                : `Mentor assigned: ${mentorLabel(mentors.find((m) => m.user_id === mentorId))}.`;
             toast.success(
-              `Proposal accepted! Student "${target.name}" (${target.email}) automatically added to Manage Result.`,
+              `Proposal accepted! Student "${target.name}" (${target.email}) added to Manage Result. ${mentorNote}`,
             );
           }
         }
@@ -163,29 +217,53 @@ function Page() {
                 key={proposal.id}
                 className="grid grid-cols-12 items-center gap-3 border-b border-border/30 px-5 py-4 last:border-b-0"
               >
-                {/* name */}
                 <div className="col-span-3">
                   <p className="font-mono text-sm font-medium">{proposal.name}</p>
                   <p className="font-mono text-[11px] text-muted-foreground/70">{proposal.email}</p>
                 </div>
 
-                {/* subject */}
                 <div className="col-span-2 text-xs font-mono text-muted-foreground">
                   {proposal.subject}
                 </div>
 
-                {/* venture */}
                 <div className="col-span-4 text-xs font-mono text-muted-foreground">
                   {proposal.venture}
                 </div>
 
-                {/* action & status */}
                 <div className="col-span-3 flex items-center gap-2">
                   {canManage && (proposal.status === "pending" || !proposal.status) ? (
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      {mustPickMentor && (
+                        <Select
+                          value={mentorChoice[proposal.id] ?? ""}
+                          onValueChange={(v) =>
+                            setMentorChoice((prev) => ({ ...prev, [proposal.id]: v }))
+                          }
+                        >
+                          <SelectTrigger className="h-8 w-full font-mono text-xs">
+                            <SelectValue
+                              placeholder={mentors.length ? "Assign mentor" : "No mentors yet"}
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {mentors.map((m) => (
+                              <SelectItem
+                                key={m.user_id}
+                                value={m.user_id}
+                                className="font-mono text-xs"
+                              >
+                                {mentorLabel(m)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                       <Button
                         size="sm"
-                        disabled={loadingId === proposal.id}
+                        disabled={
+                          loadingId === proposal.id ||
+                          (mustPickMentor && !mentorChoice[proposal.id])
+                        }
                         onClick={() => handleApproval(true, proposal.id)}
                         className="h-8 font-mono text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-3.5 border border-emerald-500/40 shadow-sm transition-all"
                       >

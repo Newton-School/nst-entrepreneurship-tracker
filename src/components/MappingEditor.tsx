@@ -29,7 +29,7 @@ export function MappingEditor({
   courseId: string;
   seedRows: { id: string; statement: string; bloom: string; tloMap: string[] }[];
 }) {
-  const { isAdmin, user } = useAuth();
+  const { isStaff: isAdmin, user } = useAuth();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);

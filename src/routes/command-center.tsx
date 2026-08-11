@@ -106,7 +106,8 @@ function Page() {
                 Syllabus ↗
               </Link>
               <Link
-                to="/course/entrepreneurship-1"
+                to="/course/$courseId"
+                params={{ courseId: "entrepreneurship-1" }}
                 className="rounded-md border border-primary/40 bg-primary/15 px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest text-primary hover:bg-primary/25"
               >
                 Course Designer ↗
@@ -282,7 +283,8 @@ function Page() {
                   </p>
                 </div>
                 <Link
-                  to="/course/entrepreneurship-1"
+                  to="/course/$courseId"
+                  params={{ courseId: "entrepreneurship-1" }}
                   className="inline-flex items-center gap-1 font-mono text-[11px] uppercase tracking-widest text-primary hover:underline"
                 >
                   Open course <ArrowUpRight className="h-3.5 w-3.5" />
@@ -498,7 +500,8 @@ function Page() {
             </div>
           </div>
           <Link
-            to="/course/entrepreneurship-1"
+            to="/course/$courseId"
+            params={{ courseId: "entrepreneurship-1" }}
             className="rounded-md border border-primary/40 bg-primary/15 px-4 py-2 font-mono text-xs uppercase tracking-widest text-primary hover:bg-primary/25"
           >
             Open Course Designer →

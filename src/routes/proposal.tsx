@@ -20,8 +20,10 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Loader2, CheckCircle2, XCircle, Clock, Check, X } from "lucide-react";
+import { fetchMentors, fetchProposals } from "./proposal.functions";
 
 export const Route = createFileRoute("/proposal")({
+  ssr: false,
   head: () => ({
     meta: [
       { title: "Venture Proposals · NST Entrepreneurship" },
@@ -31,14 +33,7 @@ export const Route = createFileRoute("/proposal")({
       },
     ],
   }),
-  loader: async () => {
-    const { data, error } = await supabase
-      .from("proposal")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (error) console.error("Error loading proposals:", error);
-    return data || [];
-  },
+  loader: async () => ({ proposals: await fetchProposals() }),
   component: Page,
 });
 
@@ -48,7 +43,7 @@ const mentorLabel = (m?: Mentor) => m?.email ?? "unknown";
 
 function Page() {
   const initialData = Route.useLoaderData();
-  const [proposals, setProposals] = useState(initialData);
+  const [proposals, setProposals] = useState(initialData.proposals);
   const [loadingId, setLoadingId] = useState<number | null>(null);
   const [mentors, setMentors] = useState<Mentor[]>([]);
   const [mentorChoice, setMentorChoice] = useState<Record<number, string>>({});
@@ -60,35 +55,13 @@ function Page() {
   const mustPickMentor = actor !== null && mustPickMentorToAccept(actor);
 
   useEffect(() => {
-    fetchProposals();
-  }, []);
-
-  useEffect(() => {
     if (!mustPickMentor) return;
-    supabase
-      .from("user_roles")
-      .select("user_id, email")
-      .eq("role", "mentor")
-      .order("email")
-      .then(({ data, error }) => {
-        if (error) {
-          console.error("Error loading mentors:", error);
-          return;
-        }
-        setMentors(data ?? []);
+    fetchMentors()
+      .then(setMentors)
+      .catch((err: unknown) => {
+        console.error("Error loading mentors:", err);
       });
   }, [mustPickMentor]);
-
-  const fetchProposals = async () => {
-    const { data, error } = await supabase
-      .from("proposal")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (!error && data) {
-      setProposals(data);
-    }
-  };
 
   const handleApproval = async (accepted: boolean, proposal_id: number) => {
     if (!canManage || !actor) return;
@@ -123,26 +96,15 @@ function Page() {
       if (accepted) {
         const target = proposals?.find((p) => p.id === proposal_id);
         if (target) {
-          let matchedUserId: string | null = null;
-          if (target.email) {
-            const { data: matchedRoles } = await supabase
-              .from("user_roles")
-              .select("user_id")
-              .ilike("roll_no", target.email.trim())
-              .maybeSingle();
-
-            if (matchedRoles?.user_id) {
-              matchedUserId = matchedRoles.user_id;
-            }
-          }
+          const submitter = target.user_roles;
 
           const { error: vError } = await supabase.from("ventures").insert([
             {
-              user_id: matchedUserId,
+              user_id: target.user_id,
               mentor_id: mentorId,
-              student_name: target.name,
+              student_name: submitter?.email?.trim() ?? `Proposal #${target.id}`,
               subject: target.subject || target.venture || "Entrepreneurship Venture",
-              roll_no: target.email ? target.email.trim() : `${target.id}`,
+              roll_no: submitter?.roll_no?.trim() || `${target.id}`,
             },
           ]);
 
@@ -154,7 +116,7 @@ function Page() {
                 ? "You are assigned as mentor."
                 : `Mentor assigned: ${mentorLabel(mentors.find((m) => m.user_id === mentorId))}.`;
             toast.success(
-              `Proposal accepted! Student "${target.name}" (${target.email}) added to Manage Result. ${mentorNote}`,
+              `Proposal accepted! Student "${submitter?.email?.trim() ?? `#${target.id}`}" added to Manage Result. ${mentorNote}`,
             );
           }
         }
@@ -218,8 +180,12 @@ function Page() {
                 className="grid grid-cols-12 items-center gap-3 border-b border-border/30 px-5 py-4 last:border-b-0"
               >
                 <div className="col-span-3">
-                  <p className="font-mono text-sm font-medium">{proposal.name}</p>
-                  <p className="font-mono text-[11px] text-muted-foreground/70">{proposal.email}</p>
+                  <p className="font-mono text-sm font-medium">
+                    {proposal.user_roles?.email ?? "Unknown submitter"}
+                  </p>
+                  <p className="font-mono text-[11px] text-muted-foreground/70">
+                    {proposal.user_roles?.roll_no ?? "—"}
+                  </p>
                 </div>
 
                 <div className="col-span-2 text-xs font-mono text-muted-foreground">

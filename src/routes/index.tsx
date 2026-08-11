@@ -2,8 +2,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { TopBar } from "@/components/TopBar";
 import { TLOS, YEARS, WEIGHTAGE } from "@/lib/framework-data";
 import { ArrowRight, Compass, Map, Gauge, Trophy } from "lucide-react";
-import { ApplyNowButton } from "@/components/ApplyNowButton";
-import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -31,8 +29,6 @@ const NAV = [
 ] as const;
 
 function Page() {
-  const { isStaff, status } = useAuth();
-
   return (
     <>
       <TopBar title="Master Framework · Overview" breadcrumb="NST 2026" />
@@ -52,7 +48,6 @@ function Page() {
             theory. Validation over ideation. Systems thinking over hype.
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-3">
-            {status !== "loading" && !isStaff && <ApplyNowButton size="lg" />}
             <Link
               to="/philosophy"
               className="group inline-flex items-center gap-2 rounded-md border border-border bg-background/30 px-4 py-2 font-mono text-xs uppercase tracking-widest text-foreground hover:bg-accent/40"

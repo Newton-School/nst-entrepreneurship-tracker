@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ArrowUpRight, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
 
 interface ApplyNowButtonProps {
   className?: string;
@@ -29,34 +30,37 @@ export function ApplyNowButton({
   size = "default",
   label = "Apply Now",
 }: ApplyNowButtonProps) {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm({
     defaultValues: {
-      name: "",
-      email: "",
       subject: "",
       venture: "",
     },
     onSubmit: async ({ value }) => {
       setSubmitting(true);
-      console.log(value);
+      setSubmitError(null);
       try {
-        const { name, email, subject, venture } = value;
-        const { data, error } = await supabase.from("proposal").insert([
+        if (!user) {
+          throw new Error("Sign in before submitting a proposal.");
+        }
+        const { subject, venture } = value;
+        const { error } = await supabase.from("proposal").insert([
           {
-            name,
-            email,
+            user_id: user.id,
             subject,
             venture,
           },
         ]);
+        if (error) throw new Error(error.message);
         form.reset();
         setDone(true);
-      } catch {
-        setDone(true);
+      } catch (err) {
+        setSubmitError(err instanceof Error ? err.message : "Something went wrong.");
       } finally {
         setSubmitting(false);
       }
@@ -68,7 +72,10 @@ export function ApplyNowButton({
       open={open}
       onOpenChange={(v) => {
         setOpen(v);
-        if (!v) setDone(false);
+        if (!v) {
+          setDone(false);
+          setSubmitError(null);
+        }
       }}
     >
       <DialogTrigger asChild>
@@ -110,73 +117,10 @@ export function ApplyNowButton({
             className="space-y-3"
           >
             <form.Field
-              name="name"
-              validators={{
-                onChange: ({ value }) =>
-                  !value || !value.trim() ? "Full name is required" : undefined,
-              }}
-              children={(field) => (
-                <div className="space-y-1.5">
-                  <Label
-                    htmlFor={field.name}
-                    className="text-xs uppercase tracking-widest text-muted-foreground"
-                  >
-                    Full Name
-                  </Label>
-                  <Input
-                    id={field.name}
-                    name={field.name}
-                    value={field.state.value}
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    required
-                    className="bg-background/40"
-                  />
-                  {field.state.meta.isTouched && field.state.meta.errors.length ? (
-                    <p className="text-[11px] text-destructive font-mono">
-                      {field.state.meta.errors.join(", ")}
-                    </p>
-                  ) : null}
-                </div>
-              )}
-            />
-            <form.Field
-              name="email"
-              validators={{
-                onChange: ({ value }) =>
-                  !value || !value.trim() ? "Email is required" : undefined,
-              }}
-              children={(field) => (
-                <div className="space-y-1.5">
-                  <Label
-                    htmlFor={field.name}
-                    className="text-xs uppercase tracking-widest text-muted-foreground"
-                  >
-                    Email
-                  </Label>
-                  <Input
-                    id={field.name}
-                    name={field.name}
-                    type="email"
-                    value={field.state.value}
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    required
-                    className="bg-background/40"
-                  />
-                  {field.state.meta.isTouched && field.state.meta.errors.length ? (
-                    <p className="text-[11px] text-destructive font-mono">
-                      {field.state.meta.errors.join(", ")}
-                    </p>
-                  ) : null}
-                </div>
-              )}
-            />
-            <form.Field
               name="subject"
               validators={{
                 onChange: ({ value }) =>
-                  !value || !value.trim() ? "Full name is required" : undefined,
+                  !value || !value.trim() ? "Subject is required" : undefined,
               }}
               children={(field) => (
                 <div className="space-y-1.5">
@@ -236,6 +180,9 @@ export function ApplyNowButton({
                 </div>
               )}
             />
+            {submitError ? (
+              <p className="text-[11px] text-destructive font-mono">{submitError}</p>
+            ) : null}
             <DialogFooter>
               <Button
                 type="submit"

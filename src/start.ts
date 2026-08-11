@@ -1,5 +1,6 @@
 import ws from "ws";
 if (typeof globalThis.WebSocket === "undefined") {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   globalThis.WebSocket = ws as any;
 }
 
@@ -24,7 +25,7 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
 });
 
 const csrfMiddleware = createCsrfMiddleware({
-  filter: (ctx) => ctx.handlerType === 'serverFn',
+  filter: (ctx) => ctx.handlerType === "serverFn",
 });
 
 export const startInstance = createStart(() => ({

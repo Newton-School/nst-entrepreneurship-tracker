@@ -163,8 +163,8 @@ const adminSections: NavSection[] = [
 
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { user, isAdmin, isSuperAdmin, signOut } = useAuth();
-  const isUserAdmin = isAdmin || isSuperAdmin;
+  const { user, isAdmin, signOut } = useAuth();
+  const isUserAdmin = isAdmin;
 
   // Active state checker
   const isItemActive = (item: NavItem) => {
@@ -256,13 +256,9 @@ export function AppSidebar() {
                     {user.email}
                   </p>
                 </div>
-                {isSuperAdmin ? (
-                  <Badge className="bg-primary/30 font-mono text-[9px] text-primary shrink-0 px-1.5 py-0.5">
-                    <ShieldCheck className="mr-1 h-2.5 w-2.5" />
-                    Super
-                  </Badge>
-                ) : isAdmin ? (
+                {isAdmin ? (
                   <Badge className="bg-primary/20 font-mono text-[9px] text-primary shrink-0 px-1.5 py-0.5">
+                    <ShieldCheck className="mr-1 h-2.5 w-2.5" />
                     Admin
                   </Badge>
                 ) : (

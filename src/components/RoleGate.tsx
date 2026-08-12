@@ -3,7 +3,8 @@ import { Link } from "@tanstack/react-router";
 import { Loader2, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TopBar } from "@/components/TopBar";
-import { useAuth } from "@/lib/auth";
+import { useAuth, type Role } from "@/lib/auth";
+import { ROLE_LABELS } from "@/lib/roles";
 
 function Panel({ title, body, action }: { title: string; body: string; action?: ReactNode }) {
   return (
@@ -23,8 +24,8 @@ function Panel({ title, body, action }: { title: string; body: string; action?: 
   );
 }
 
-export function RoleGate({ children }: { children: ReactNode }) {
-  const { status, roleError } = useAuth();
+export function RoleGate({ children, allow }: { children: ReactNode; allow?: Role[] }) {
+  const { status, role, roleError } = useAuth();
 
   if (status === "loading") {
     return (
@@ -56,6 +57,22 @@ export function RoleGate({ children }: { children: ReactNode }) {
           roleError
             ? `${roleError} Ask an administrator to assign your account a role before using the evaluation portal.`
             : "Your account has no role assigned. Ask an administrator to assign one."
+        }
+      />
+    );
+  }
+
+  if (allow && (role === null || !allow.includes(role))) {
+    return (
+      <Panel
+        title="Restricted"
+        body={`This page is limited to ${allow.map((r) => ROLE_LABELS[r]).join(" and ")} accounts. You are signed in as ${role ? ROLE_LABELS[role] : "an account with no role"}.`}
+        action={
+          <Link to="/">
+            <Button variant="outline" className="font-mono text-xs uppercase tracking-wider">
+              Back to overview
+            </Button>
+          </Link>
         }
       />
     );

@@ -17,6 +17,7 @@ type AuthState = {
   isStaff: boolean;
   isMentor: boolean;
   isBoard: boolean;
+  isAdmin: boolean;
   signOut: () => Promise<void>;
 };
 
@@ -30,6 +31,7 @@ const Ctx = createContext<AuthState>({
   isStaff: false,
   isMentor: false,
   isBoard: false,
+  isAdmin: false,
   signOut: async () => {},
 });
 
@@ -93,6 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isStaff: status === "ready" && role !== "student",
     isMentor: role === "mentor",
     isBoard: role === "admin" || role === "academic_board",
+    isAdmin: role === "admin",
     signOut: async () => {
       await supabase.auth.signOut();
     },

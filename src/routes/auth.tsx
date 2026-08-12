@@ -14,6 +14,9 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const rollNoPattern = /^20\d{2}-[A-Z]-\d{8}[A-Z]?$/;
+
 function AuthPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -28,6 +31,8 @@ function AuthPage() {
 
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
+    if (!emailPattern.test(email.trim())) return toast.error("Enter a valid email address.");
+    if (!password) return toast.error("Password is required.");
     setBusy(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false);
@@ -38,6 +43,10 @@ function AuthPage() {
 
   async function signUp(e: React.FormEvent) {
     e.preventDefault();
+    if (!emailPattern.test(email.trim())) return toast.error("Enter a valid email address.");
+    if (!rollNoPattern.test(rollNo.trim()))
+      return toast.error("Roll no. must look like 2024-B-16022006A.");
+    if (password.length < 8) return toast.error("Password must be at least 8 characters.");
     setBusy(true);
     const { error } = await supabase.auth.signUp({
       email,

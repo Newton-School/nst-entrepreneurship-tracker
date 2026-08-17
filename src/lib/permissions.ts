@@ -40,6 +40,14 @@ export function canChangeRoleOf(a: Actor, targetUserId: string): boolean {
   return canManageRoles(a) && a.userId !== targetUserId;
 }
 
+export function canCreateAccounts(a: Actor): boolean {
+  return canManageRoles(a);
+}
+
+export function canDeleteAccountOf(a: Actor, targetUserId: string): boolean {
+  return canManageRoles(a) && a.userId !== targetUserId;
+}
+
 export function canReviewProposal(a: Actor): boolean {
   return a.role !== "student";
 }

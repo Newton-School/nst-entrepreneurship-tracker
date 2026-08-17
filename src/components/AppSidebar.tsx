@@ -156,7 +156,7 @@ const adminGovernanceSection: NavSection = {
 const administrationSection: NavSection = {
   id: "administration",
   label: "ADMINISTRATION",
-  items: [{ title: "Role Management", url: "/admin", icon: UserCog }],
+  items: [{ title: "Accounts & Roles", url: "/admin", icon: UserCog }],
 };
 
 const adminSections: NavSection[] = [

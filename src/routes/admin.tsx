@@ -1,8 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, RefreshCw, Search, ShieldCheck, History } from "lucide-react";
+import {
+  Loader2,
+  RefreshCw,
+  Search,
+  ShieldCheck,
+  History,
+  Trash2,
+  UserPlus,
+  UserMinus,
+} from "lucide-react";
 import { TopBar } from "@/components/TopBar";
 import { RoleGate } from "@/components/RoleGate";
+import { AddAccountDialog } from "@/components/AddAccountDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,17 +35,23 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { deleteAccountFn } from "@/lib/account-admin";
 import { useAuth, type Role } from "@/lib/auth";
-import { canChangeRoleOf, type Actor } from "@/lib/permissions";
+import {
+  canChangeRoleOf,
+  canCreateAccounts,
+  canDeleteAccountOf,
+  type Actor,
+} from "@/lib/permissions";
 import { ROLES, ROLE_LABELS } from "@/lib/roles";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
     meta: [
-      { title: "Role Management · NST Entrepreneurship" },
+      { title: "Account Management · NST Entrepreneurship" },
       {
         name: "description",
-        content: "Assign and audit portal roles across every account in the track.",
+        content: "Create, remove and re-role every account in the track.",
       },
     ],
   }),
@@ -65,11 +81,22 @@ type LogEntry = {
   created_at: string;
 };
 
+type AccountLogEntry = {
+  id: string;
+  action: string;
+  target_email: string | null;
+  role: Role | null;
+  actor_email: string | null;
+  created_at: string;
+};
+
 type PendingChange = { account: Account; nextRole: Role };
 
 const NO_ROLE = "__none__";
 
 const LOG_COLUMNS = "id, target_email, previous_role, new_role, changed_by_email, created_at";
+
+const ACCOUNT_LOG_COLUMNS = "id, action, target_email, role, actor_email, created_at";
 
 const fmtDate = (value: string | null) =>
   value ? new Date(value).toLocaleDateString(undefined, { day: "2-digit", month: "short" }) : "—";
@@ -88,12 +115,16 @@ function Page() {
 
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [log, setLog] = useState<LogEntry[]>([]);
+  const [accountLog, setAccountLog] = useState<AccountLogEntry[]>([]);
+  const [accountLogError, setAccountLogError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<Role | "all">("all");
   const [pending, setPending] = useState<PendingChange | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Account | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
 
   useEffect(() => {
     void load();
@@ -101,11 +132,16 @@ function Page() {
 
   const load = async () => {
     setLoading(true);
-    const [users, entries] = await Promise.all([
+    const [users, entries, accountEntries] = await Promise.all([
       supabase.rpc("admin_list_users"),
       supabase
         .from("role_change_log")
         .select(LOG_COLUMNS)
+        .order("created_at", { ascending: false })
+        .limit(15),
+      supabase
+        .from("account_change_log")
+        .select(ACCOUNT_LOG_COLUMNS)
         .order("created_at", { ascending: false })
         .limit(15),
     ]);
@@ -121,7 +157,11 @@ function Page() {
 
     // The audit strip is supporting detail — a failure there must not blank the directory.
     if (entries.error) console.error("Error loading role change log:", entries.error);
+    if (accountEntries.error)
+      console.error("Error loading account change log:", accountEntries.error);
+    setAccountLogError(accountEntries.error?.message ?? null);
     setLog(entries.data ?? []);
+    setAccountLog((accountEntries.data ?? []) as AccountLogEntry[]);
     setLoading(false);
   };
 
@@ -133,6 +173,8 @@ function Page() {
       .limit(15);
     setLog(data ?? []);
   };
+
+  const adminCount = useMemo(() => accounts.filter((a) => a.role === "admin").length, [accounts]);
 
   const counts = useMemo(() => {
     const tally: Record<string, number> = { unassigned: 0 };
@@ -173,9 +215,30 @@ function Page() {
     void refreshLog();
   };
 
+  const applyDelete = async (account: Account) => {
+    setSavingId(account.user_id);
+    const result = await deleteAccountFn({ data: { userId: account.user_id } }).catch(
+      (error: unknown) => ({
+        ok: false as const,
+        error: error instanceof Error ? error.message : "The server could not be reached.",
+      }),
+    );
+    setSavingId(null);
+
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+
+    setAccounts((prev) => prev.filter((a) => a.user_id !== account.user_id));
+    toast.success(`${account.email ?? "Account"} has been deleted.`);
+    if (!result.logged) toast.warning("The deletion could not be written to the audit log.");
+    void load();
+  };
+
   return (
     <>
-      <TopBar title="Role Management" breadcrumb="NST 2026 · Administration" />
+      <TopBar title="Account Management" breadcrumb="NST 2026 · Administration" />
       <main className="relative flex-1 space-y-6 px-6 py-8 lg:px-10 lg:py-10">
         {/* Hero */}
         <section className="glass-strong relative overflow-hidden rounded-2xl p-6 lg:p-8">
@@ -186,21 +249,31 @@ function Page() {
                 Administration · Access control
               </p>
               <h2 className="mt-2 font-mono text-2xl tracking-tight lg:text-4xl">
-                Role <span className="gold-text">management</span>
+                Account <span className="gold-text">management</span>
               </h2>
               <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-                Every account in the portal and the role it carries. Roles are written through a
-                database function that re-checks you are an admin, records the change, and refuses
-                to let you edit your own role or remove the last admin.
+                Add an account, remove one, and set the role it carries. Every write re-checks on
+                the server that you are an admin, records what happened, and refuses to let you edit
+                or delete your own account or the last admin.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline" className="font-mono text-[10px]">
                 {accounts.length} accounts
               </Badge>
               <Badge variant="outline" className="font-mono text-[10px]">
                 Admin-only page
               </Badge>
+              {actor && canCreateAccounts(actor) && (
+                <Button
+                  size="sm"
+                  onClick={() => setAddOpen(true)}
+                  className="cursor-pointer font-mono text-xs"
+                >
+                  <UserPlus className="mr-1.5 h-3.5 w-3.5" />
+                  Add account
+                </Button>
+              )}
             </div>
           </div>
 
@@ -275,10 +348,11 @@ function Page() {
           </div>
 
           <div className="grid grid-cols-12 gap-3 border-b border-border/50 bg-background/40 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-            <div className="col-span-5">Account</div>
+            <div className="col-span-4">Account</div>
             <div className="col-span-2">Joined</div>
             <div className="col-span-2">Last sign-in</div>
             <div className="col-span-3">Role</div>
+            <div className="col-span-1 text-right">Remove</div>
           </div>
 
           {loading ? (
@@ -299,12 +373,15 @@ function Page() {
             visible.map((account) => {
               const isSelf = account.user_id === user?.id;
               const editable = actor !== null && canChangeRoleOf(actor, account.user_id);
+              const isLastAdmin = account.role === "admin" && adminCount <= 1;
+              const removable =
+                actor !== null && canDeleteAccountOf(actor, account.user_id) && !isLastAdmin;
               return (
                 <div
                   key={account.user_id}
                   className="grid grid-cols-12 items-center gap-3 border-b border-border/30 px-5 py-4 last:border-b-0"
                 >
-                  <div className="col-span-5 min-w-0">
+                  <div className="col-span-4 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="truncate font-mono text-sm">
                         {account.email ?? `Account ${account.user_id.slice(0, 8)}`}
@@ -357,6 +434,29 @@ function Page() {
                         Another admin has to change your role.
                       </p>
                     )}
+                  </div>
+
+                  <div className="col-span-1 flex justify-end">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      disabled={!removable || savingId === account.user_id}
+                      onClick={() => setPendingDelete(account)}
+                      title={
+                        isSelf
+                          ? "Another admin has to delete your account."
+                          : isLastAdmin
+                            ? "The last admin cannot be deleted."
+                            : "Delete this account"
+                      }
+                      className="h-8 w-8 cursor-pointer text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed"
+                    >
+                      {savingId === account.user_id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
                   </div>
                 </div>
               );
@@ -422,7 +522,83 @@ function Page() {
             )}
           </div>
         </section>
+
+        {/* Accounts added and removed */}
+        <section className="glass-strong rounded-2xl p-5 lg:p-6">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <h3 className="font-mono text-lg">Accounts added and removed</h3>
+              <p className="text-xs text-muted-foreground">
+                Emails are kept here as they were at the time, so a deleted account is still
+                readable after the row it came from is gone.
+              </p>
+            </div>
+            <UserMinus className="h-4 w-4 shrink-0 text-primary" />
+          </div>
+
+          <div className="mt-5 overflow-x-auto">
+            {accountLogError ? (
+              <div className="space-y-1 py-4 text-center font-mono text-xs text-muted-foreground">
+                <p className="text-destructive">{accountLogError}</p>
+                <p>Apply the latest migration in supabase/migrations, then refresh.</p>
+              </div>
+            ) : accountLog.length === 0 ? (
+              <p className="py-4 text-center font-mono text-xs text-muted-foreground">
+                No account has been added or removed through this panel yet.
+              </p>
+            ) : (
+              <table className="w-full min-w-160 border-collapse font-mono text-xs">
+                <thead>
+                  <tr className="text-left">
+                    <th className="pb-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                      Account
+                    </th>
+                    <th className="pb-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                      Action
+                    </th>
+                    <th className="pb-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                      By
+                    </th>
+                    <th className="pb-2 text-right font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                      When
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {accountLog.map((entry) => (
+                    <tr key={entry.id} className="border-t border-border/30">
+                      <td className="py-2 pr-3">{entry.target_email ?? "Unknown account"}</td>
+                      <td className="py-2 pr-3">
+                        <span
+                          className={
+                            entry.action === "deleted" ? "text-destructive" : "text-primary"
+                          }
+                        >
+                          {entry.action === "deleted" ? "Removed" : "Added"}
+                        </span>
+                        {entry.role && (
+                          <span className="text-muted-foreground">
+                            {" "}
+                            · {ROLE_LABELS[entry.role]}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2 pr-3 text-muted-foreground">
+                        {entry.actor_email ?? "unknown"}
+                      </td>
+                      <td className="py-2 text-right text-muted-foreground/70">
+                        {fmtDateTime(entry.created_at)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </section>
       </main>
+
+      <AddAccountDialog open={addOpen} onOpenChange={setAddOpen} onCreated={() => void load()} />
 
       <AlertDialog open={pending !== null} onOpenChange={(open) => !open && setPending(null)}>
         <AlertDialogContent className="glass-strong">
@@ -454,6 +630,45 @@ function Page() {
               }}
             >
               Change role
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => !open && setPendingDelete(null)}
+      >
+        <AlertDialogContent className="glass-strong">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 font-mono text-base">
+              <Trash2 className="h-4 w-4 text-destructive" />
+              Delete this account?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs leading-relaxed">
+              {pendingDelete && (
+                <>
+                  <span className="text-foreground">{pendingDelete.email ?? "This account"}</span>{" "}
+                  is removed from the portal for good — the sign-in, the role and any files uploaded
+                  under it go too. The venture and proposals stay, with the student link cleared,
+                  and re-attach if the account is added back under the same email. This cannot be
+                  undone.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="cursor-pointer font-mono text-xs">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="cursor-pointer bg-destructive font-mono text-xs text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (pendingDelete) void applyDelete(pendingDelete);
+                setPendingDelete(null);
+              }}
+            >
+              Delete account
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

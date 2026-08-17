@@ -33,6 +33,42 @@ export type Database = {
   };
   public: {
     Tables: {
+      account_change_log: {
+        Row: {
+          action: string;
+          actor_email: string | null;
+          actor_id: string;
+          created_at: string;
+          id: string;
+          role: Database["public"]["Enums"]["app_role"] | null;
+          target_email: string | null;
+          target_roll_no: string | null;
+          target_user_id: string;
+        };
+        Insert: {
+          action: string;
+          actor_email?: string | null;
+          actor_id: string;
+          created_at?: string;
+          id?: string;
+          role?: Database["public"]["Enums"]["app_role"] | null;
+          target_email?: string | null;
+          target_roll_no?: string | null;
+          target_user_id: string;
+        };
+        Update: {
+          action?: string;
+          actor_email?: string | null;
+          actor_id?: string;
+          created_at?: string;
+          id?: string;
+          role?: Database["public"]["Enums"]["app_role"] | null;
+          target_email?: string | null;
+          target_roll_no?: string | null;
+          target_user_id?: string;
+        };
+        Relationships: [];
+      };
       course_mappings: {
         Row: {
           bloom_level: string | null;

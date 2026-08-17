@@ -8,14 +8,17 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Sparkles, Lock } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import {
+  EMAIL_PATTERN as emailPattern,
+  ROLL_NO_PATTERN as rollNoPattern,
+  ROLL_NO_EXAMPLE,
+  MIN_PASSWORD_LENGTH,
+} from "@/lib/account-validation";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Sign in · NST Entrepreneurship" }] }),
   component: AuthPage,
 });
-
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const rollNoPattern = /^20\d{2}-[A-Z]-\d{8}[A-Z]?$/;
 
 function AuthPage() {
   const navigate = useNavigate();
@@ -45,8 +48,9 @@ function AuthPage() {
     e.preventDefault();
     if (!emailPattern.test(email.trim())) return toast.error("Enter a valid email address.");
     if (!rollNoPattern.test(rollNo.trim()))
-      return toast.error("Roll no. must look like 2024-B-16022006A.");
-    if (password.length < 8) return toast.error("Password must be at least 8 characters.");
+      return toast.error(`Roll no. must look like ${ROLL_NO_EXAMPLE}.`);
+    if (password.length < MIN_PASSWORD_LENGTH)
+      return toast.error(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
     setBusy(true);
     const { error } = await supabase.auth.signUp({
       email,
@@ -116,7 +120,7 @@ function AuthPage() {
               <Field
                 id="rollNo"
                 label="Roll No."
-                placeholder="e.g. 2024-B-16022006A"
+                placeholder={`e.g. ${ROLL_NO_EXAMPLE}`}
                 value={rollNo}
                 onChange={setRollNo}
                 type="text"
@@ -124,7 +128,7 @@ function AuthPage() {
               />
               <Field
                 id="pw2"
-                label="Password (8+ chars)"
+                label={`Password (${MIN_PASSWORD_LENGTH}+ chars)`}
                 value={password}
                 onChange={setPassword}
                 type="password"

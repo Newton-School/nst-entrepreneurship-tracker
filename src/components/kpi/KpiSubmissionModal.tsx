@@ -39,6 +39,20 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { canEditKpi, canLockKpi, canUnlockKpi, type Actor } from "@/lib/permissions";
 import { sendLockedKpiEmailsFn } from "@/lib/email/email.actions";
+import { uploadSubmissionServerFn, downloadSubmissionServerFn } from "@/lib/submission.actions";
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      const result = reader.result as string;
+      const base64 = result.split(",")[1] || "";
+      resolve(base64);
+    };
+    reader.onerror = (error) => reject(error);
+  });
+}
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 const MAX_NOTE_LENGTH = 1000;
@@ -218,63 +232,30 @@ export function KpiSubmissionModal({
 
     setSubmitting(true);
     try {
-      const formData = new FormData();
-      formData.append("kpiId", target.kpiId);
-      formData.append("ventureId", target.ventureId);
-      if (target.studentId) formData.append("studentId", target.studentId);
-      formData.append("note", note);
-      if (selectedFile) formData.append("file", selectedFile);
+      let fileBase64: string | undefined = undefined;
+      let fileName: string | undefined = undefined;
+      let mimeType: string | undefined = undefined;
 
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
+      if (selectedFile) {
+        fileBase64 = await fileToBase64(selectedFile);
+        fileName = selectedFile.name;
+        mimeType = selectedFile.type || "application/octet-stream";
+      }
 
-      const res = await fetch("/api/submission/upload", {
-        method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        body: formData,
+      const result = await uploadSubmissionServerFn({
+        data: {
+          kpiId: target.kpiId,
+          ventureId: target.ventureId,
+          studentId: target.studentId || undefined,
+          note,
+          fileBase64,
+          fileName,
+          mimeType,
+        },
       });
 
-      const contentType = res.headers.get("content-type") || "";
-      if (contentType.includes("application/json")) {
-        const resData = await res.json();
-        if (!res.ok) {
-          throw new Error(resData.statusMessage || resData.message || "Upload failed.");
-        }
-      } else {
-        // Dev server fallback
-        const isLate = target.dueDate ? new Date() > new Date(target.dueDate) : false;
-        const { data: existingSub } = await supabase
-          .from("kpi_submissions")
-          .select("id, storage_path")
-          .eq("kpi_id", target.kpiId)
-          .maybeSingle();
-
-        const submissionId = existingSub?.id || crypto.randomUUID();
-        const fileName = selectedFile?.name || submission?.file_name || "evidence.file";
-        const storagePath = `ventures/${target.ventureId}/submissions/${submissionId}/${fileName}`;
-
-        const { data: userData } = await supabase.auth.getUser();
-        const currentUserId = userData.user?.id || target.studentId || "";
-
-        const { error: saveErr } = await supabase
-          .from("kpi_submissions")
-          .upsert({
-            id: submissionId,
-            venture_id: target.ventureId,
-            kpi_id: target.kpiId,
-            student_id: currentUserId,
-            file_name: fileName,
-            storage_path: storagePath,
-            size_bytes: selectedFile?.size || submission?.size_bytes || 0,
-            mime_type: selectedFile?.type || submission?.mime_type || "application/octet-stream",
-            note: note.trim() || null,
-            submitted_at: new Date().toISOString(),
-            is_late: isLate,
-          });
-
-        if (saveErr) {
-          throw new Error(`Database save failed: ${saveErr.message}`);
-        }
+      if (!result || result.success === false) {
+        throw new Error((result as any)?.error || (result as any)?.statusMessage || "Upload to AWS S3 failed.");
       }
 
       toast.success(
@@ -296,23 +277,19 @@ export function KpiSubmissionModal({
     if (!submission) return;
     setDownloading(true);
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-
-      const res = await fetch(`/api/submission/download?kpiId=${target.kpiId}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      const result = await downloadSubmissionServerFn({
+        data: {
+          kpiId: target.kpiId,
+        },
       });
 
-      const contentType = res.headers.get("content-type") || "";
-      if (contentType.includes("application/json")) {
-        const data = await res.json();
-        if (res.ok && data.url && data.url.startsWith("http")) {
-          window.open(data.url, "_blank");
-          return;
-        }
-        if (!res.ok) {
-          throw new Error(data.statusMessage || data.message || "Could not generate S3 download link.");
-        }
+      if (result && result.success && result.url && result.url.startsWith("http")) {
+        window.open(result.url, "_blank");
+        return;
+      }
+
+      if (result && result.error) {
+        throw new Error(result.error);
       }
 
       throw new Error(`AWS S3 download link unavailable. Storage key: ${submission.storage_path}`);

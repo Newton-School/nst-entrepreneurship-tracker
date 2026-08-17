@@ -3,16 +3,15 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
 export const sendLockedKpiEmailsFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .validator(
     z.object({
       kpiId: z.string(),
       ventureId: z.string(),
+      mentorUserId: z.string().optional(),
     })
   )
-  .handler(async ({ data, context }) => {
-    const { kpiId, ventureId } = data;
-    const { userId: mentorUserId } = context;
+  .handler(async ({ data }) => {
+    const { kpiId, ventureId, mentorUserId = "" } = data;
 
     try {
       const { EmailService } = await import("./email.service");

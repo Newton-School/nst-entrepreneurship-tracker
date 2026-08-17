@@ -27,15 +27,20 @@ ARG VITE_SUPABASE_PROJECT_ID
 ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
 ENV VITE_SUPABASE_PUBLISHABLE_KEY=$VITE_SUPABASE_PUBLISHABLE_KEY
 ENV VITE_SUPABASE_PROJECT_ID=$VITE_SUPABASE_PROJECT_ID
+ENV SUPABASE_URL=$VITE_SUPABASE_URL
+ENV SUPABASE_PUBLISHABLE_KEY=$VITE_SUPABASE_PUBLISHABLE_KEY
 ENV NODE_ENV=production
 
 RUN npm run build
 
 # ---------------------------------------------------
-# Stage 4: Production runner
+# Stage 4: Production runner (Lightweight Nitro Server)
 # ---------------------------------------------------
 FROM node:22-alpine AS runner
 WORKDIR /app
+
+LABEL org.opencontainers.image.source="https://github.com/kritgarg/nst-entrepreneurship-tracker"
+LABEL org.opencontainers.image.description="NST Entrepreneurship Tracker Production Image"
 
 ENV NODE_ENV=production
 ENV PORT=3000
@@ -45,19 +50,12 @@ ENV HOST=0.0.0.0
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 tanstack
 
-# Copy application files and built assets with tanstack user ownership
-COPY --chown=tanstack:nodejs --from=builder /app/package.json ./package.json
-COPY --chown=tanstack:nodejs --from=builder /app/package-lock.json ./package-lock.json
-COPY --chown=tanstack:nodejs --from=builder /app/node_modules ./node_modules
-COPY --chown=tanstack:nodejs --from=builder /app/dist ./dist
-COPY --chown=tanstack:nodejs --from=builder /app/src ./src
-COPY --chown=tanstack:nodejs --from=builder /app/vite.config.ts ./vite.config.ts
-COPY --chown=tanstack:nodejs --from=builder /app/tsconfig.json ./tsconfig.json
-COPY --chown=tanstack:nodejs --from=builder /app/wrangler.jsonc ./wrangler.jsonc
+# Copy built Nitro output
+COPY --chown=tanstack:nodejs --from=builder /app/.output ./.output
 
 USER tanstack
 
 EXPOSE 3000
 
-# Start production preview server
-CMD ["npm", "run", "preview", "--", "--host", "0.0.0.0", "--port", "3000"]
+# Run Nitro node server
+CMD ["node", ".output/server/index.mjs"]

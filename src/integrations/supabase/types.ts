@@ -273,6 +273,39 @@ export type Database = {
         };
         Relationships: [];
       };
+      role_change_log: {
+        Row: {
+          changed_by: string;
+          changed_by_email: string | null;
+          created_at: string;
+          id: string;
+          new_role: Database["public"]["Enums"]["app_role"];
+          previous_role: Database["public"]["Enums"]["app_role"] | null;
+          target_email: string | null;
+          target_user_id: string;
+        };
+        Insert: {
+          changed_by: string;
+          changed_by_email?: string | null;
+          created_at?: string;
+          id?: string;
+          new_role: Database["public"]["Enums"]["app_role"];
+          previous_role?: Database["public"]["Enums"]["app_role"] | null;
+          target_email?: string | null;
+          target_user_id: string;
+        };
+        Update: {
+          changed_by?: string;
+          changed_by_email?: string | null;
+          created_at?: string;
+          id?: string;
+          new_role?: Database["public"]["Enums"]["app_role"];
+          previous_role?: Database["public"]["Enums"]["app_role"] | null;
+          target_email?: string | null;
+          target_user_id?: string;
+        };
+        Relationships: [];
+      };
       user_roles: {
         Row: {
           created_at: string;
@@ -397,6 +430,25 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      admin_list_users: {
+        Args: never;
+        Returns: {
+          user_id: string;
+          email: string | null;
+          roll_no: string | null;
+          role: Database["public"]["Enums"]["app_role"] | null;
+          role_assigned_at: string | null;
+          signed_up_at: string;
+          last_sign_in_at: string | null;
+        }[];
+      };
+      admin_set_user_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"];
+          _user_id: string;
+        };
+        Returns: Database["public"]["Tables"]["user_roles"]["Row"];
+      };
       can_read_venture: {
         Args: { v_roll_no: string; v_student_name: string; v_user_id: string };
         Returns: boolean;

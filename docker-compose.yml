@@ -12,7 +12,7 @@ services:
         VITE_SUPABASE_PROJECT_ID: ${VITE_SUPABASE_PROJECT_ID}
     container_name: nst-entrepreneurship-tracker
     ports:
-      - "8080:3000"
+      - "8187:3000"
     env_file:
       - .env
     restart: unless-stopped
@@ -22,10 +22,11 @@ services:
     profiles: ["dev"]
     build:
       context: .
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
+      target: dev
     container_name: nst-entrepreneurship-tracker-dev
     ports:
-      - "8080:3000"
+      - "8187:3000"
     volumes:
       - .:/app
       - /app/node_modules

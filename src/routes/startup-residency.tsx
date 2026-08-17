@@ -229,7 +229,7 @@ function Page() {
                   placeholder="Describe your startup product, target customer, and what you aim to achieve during residency..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="bg-background/40 font-mono text-xs min-h-[90px]"
+                  className="bg-background/40 font-mono text-xs min-h-22.5"
                 />
               </div>
 

@@ -38,9 +38,11 @@ import {
   Award,
   Handshake,
   CheckCircle2,
+  UserCog,
 } from "lucide-react";
 import { ApplyNowButton } from "./ApplyNowButton";
 import { useAuth } from "@/lib/auth";
+import { ROLE_LABELS } from "@/lib/roles";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -133,9 +135,7 @@ const adminMasterFrameworkSection: NavSection = {
 const adminCoursesSection: NavSection = {
   id: "admin-courses",
   label: "COURSE DESIGNER",
-  items: [
-    { title: "Entrepreneurship 1", url: "/course/entrepreneurship-1", icon: FlaskConical },
-  ],
+  items: [{ title: "Entrepreneurship 1", url: "/course/entrepreneurship-1", icon: FlaskConical }],
 };
 
 const adminGovernanceSection: NavSection = {
@@ -153,6 +153,12 @@ const adminGovernanceSection: NavSection = {
   ],
 };
 
+const administrationSection: NavSection = {
+  id: "administration",
+  label: "ADMINISTRATION",
+  items: [{ title: "Role Management", url: "/admin", icon: UserCog }],
+};
+
 const adminSections: NavSection[] = [
   adminQuickAccessSection,
   adminDashboardsSection,
@@ -163,8 +169,7 @@ const adminSections: NavSection[] = [
 
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { user, isAdmin, signOut } = useAuth();
-  const isUserAdmin = isAdmin;
+  const { user, role, isStaff, isAdmin, signOut } = useAuth();
 
   // Active state checker
   const isItemActive = (item: NavItem) => {
@@ -177,10 +182,17 @@ export function AppSidebar() {
     return pathname === item.url;
   };
 
-  const sections: NavSection[] = isUserAdmin ? adminSections : studentSections;
+  const sections: NavSection[] = isStaff
+    ? isAdmin
+      ? [...adminSections, administrationSection]
+      : adminSections
+    : studentSections;
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-sidebar-border/60 bg-sidebar/95 backdrop-blur-md">
+    <Sidebar
+      collapsible="icon"
+      className="border-r border-sidebar-border/60 bg-sidebar/95 backdrop-blur-md"
+    >
       {/* Header Branding */}
       <SidebarHeader className="px-4 pb-3 pt-5 border-b border-sidebar-border/40">
         <Link to="/" className="flex items-center gap-3 px-1 group">
@@ -256,14 +268,14 @@ export function AppSidebar() {
                     {user.email}
                   </p>
                 </div>
-                {isAdmin ? (
+                {isStaff ? (
                   <Badge className="bg-primary/20 font-mono text-[9px] text-primary shrink-0 px-1.5 py-0.5">
                     <ShieldCheck className="mr-1 h-2.5 w-2.5" />
-                    Admin
+                    {role ? ROLE_LABELS[role] : "Staff"}
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="font-mono text-[9px] shrink-0 px-1.5 py-0.5">
-                    Student
+                    {role ? ROLE_LABELS[role] : "No role"}
                   </Badge>
                 )}
               </div>
@@ -289,8 +301,8 @@ export function AppSidebar() {
           )}
         </div>
 
-        {/* Apply Now Button for non-admin users */}
-        {!isUserAdmin && <ApplyNowButton className="w-full justify-center shadow-sm" />}
+        {/* Apply Now Button for students only */}
+        {!isStaff && <ApplyNowButton className="w-full justify-center shadow-sm" />}
 
         {/* Footer Version Tag */}
         <p className="text-center font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground/50 select-none">

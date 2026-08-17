@@ -32,6 +32,14 @@ export function canManageVentures(a: Actor): boolean {
   return isBoard(a);
 }
 
+export function canManageRoles(a: Actor): boolean {
+  return a.role === "admin";
+}
+
+export function canChangeRoleOf(a: Actor, targetUserId: string): boolean {
+  return canManageRoles(a) && a.userId !== targetUserId;
+}
+
 export function canReviewProposal(a: Actor): boolean {
   return a.role !== "student";
 }

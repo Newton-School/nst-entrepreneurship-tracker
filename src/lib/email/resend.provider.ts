@@ -9,15 +9,16 @@ export class ResendProvider implements EmailProvider {
     const apiKey = process.env.RESEND_API_KEY;
     const from = process.env.EMAIL_FROM;
 
-    if (!apiKey) {
-      throw new Error("Missing RESEND_API_KEY environment variable. Add it to your server configuration.");
+    if (!apiKey || !from) {
+      console.warn(
+        `[ResendProvider] Missing RESEND_API_KEY or EMAIL_FROM in environment variables. Email sending disabled.`
+      );
+      this.resend = null as any;
+      this.fromAddress = from || "";
+    } else {
+      this.resend = new Resend(apiKey);
+      this.fromAddress = from;
     }
-    if (!from) {
-      throw new Error("Missing EMAIL_FROM environment variable. Add it to your server configuration.");
-    }
-
-    this.resend = new Resend(apiKey);
-    this.fromAddress = from;
   }
 
   async sendEmail(params: {
@@ -25,6 +26,15 @@ export class ResendProvider implements EmailProvider {
     subject: string;
     html: string;
   }): Promise<{ messageId?: string; error?: string }> {
+    if (!this.resend || !this.fromAddress) {
+      const missing = [
+        ...(!process.env.RESEND_API_KEY ? ["RESEND_API_KEY"] : []),
+        ...(!process.env.EMAIL_FROM ? ["EMAIL_FROM"] : []),
+      ];
+      return {
+        error: `Email not sent. Missing environment variables on server/Vercel: ${missing.join(", ")}`,
+      };
+    }
     try {
       const response = await this.resend.emails.send({
         from: this.fromAddress,

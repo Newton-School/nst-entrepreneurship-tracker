@@ -9,7 +9,8 @@ export default defineEventHandler(async (event) => {
   const request = new Request(url, {
     method,
     headers,
-    body: method !== "GET" && method !== "HEAD" ? (event.node?.req as any) : undefined,
+    body:
+      method !== "GET" && method !== "HEAD" ? (event.node?.req as unknown as BodyInit) : undefined,
     // @ts-expect-error duplex required for node fetch body
     duplex: "half",
   });

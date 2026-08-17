@@ -1,8 +1,20 @@
 import { Resend } from "resend";
 import type { EmailProvider } from "./email.types";
 
+function normalizeFromAddress(value: string): string {
+  const from = value
+    .trim()
+    .replace(/^["']|["']$/g, "")
+    .trim();
+  if (/<[^\s<>]+@[^\s<>]+>$/.test(from)) return from;
+  const match = from.match(/^(.*?)\s*([^\s<>@]+@[^\s<>@]+\.[^\s<>@]+)$/);
+  if (!match) return from;
+  const [, name, address] = match;
+  return name ? `${name} <${address}>` : address;
+}
+
 export class ResendProvider implements EmailProvider {
-  private resend: Resend;
+  private resend: Resend | null;
   private fromAddress: string;
 
   constructor() {
@@ -11,13 +23,13 @@ export class ResendProvider implements EmailProvider {
 
     if (!apiKey || !from) {
       console.warn(
-        `[ResendProvider] Missing RESEND_API_KEY or EMAIL_FROM in environment variables. Email sending disabled.`
+        `[ResendProvider] Missing RESEND_API_KEY or EMAIL_FROM in environment variables. Email sending disabled.`,
       );
-      this.resend = null as any;
-      this.fromAddress = from || "";
+      this.resend = null;
+      this.fromAddress = from ? normalizeFromAddress(from) : "";
     } else {
       this.resend = new Resend(apiKey);
-      this.fromAddress = from;
+      this.fromAddress = normalizeFromAddress(from);
     }
   }
 
@@ -48,8 +60,8 @@ export class ResendProvider implements EmailProvider {
       }
 
       return { messageId: response.data?.id };
-    } catch (err: any) {
-      return { error: err.message || String(err) };
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : String(err) };
     }
   }
 }

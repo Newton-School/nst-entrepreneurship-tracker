@@ -9,8 +9,14 @@ export interface EmailProvider {
 export type EmailNotificationType =
   | "KPI_SCORED_STUDENT"
   | "CONSECUTIVE_LOW_SCORE_BOARD"
-  | "CONSECUTIVE_MID_SCORE_MENTOR";
+  | "CONSECUTIVE_MID_SCORE_MENTOR"
+  | "PASSWORD_RESET";
 
+export interface PasswordResetEmailProps {
+  recipientName: string;
+  resetUrl: string;
+  expiresInMinutes: number;
+}
 
 export interface EvaluationResultEmailProps {
   studentName: string;
@@ -49,4 +55,4 @@ export interface AcademicBoardLowScoreEmailProps {
   mentorName: string;
   evaluationName: string;
   dashboardUrl: string;
-} 
+}

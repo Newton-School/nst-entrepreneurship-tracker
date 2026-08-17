@@ -1,86 +1,6 @@
 import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { createServerFn } from "@tanstack/react-start";
-import { render } from "@react-email/render";
-import { EvaluationResultEmail } from "@/lib/email/templates/student/EvaluationResultEmail";
-import { EvaluationFollowUpEmail } from "@/lib/email/templates/mentor/EvaluationFollowUpEmail";
-import { EvaluationLowScoreEmail } from "@/lib/email/templates/mentor/EvaluationLowScoreEmail";
-import { AcademicBoardLowScoreEmail } from "@/lib/email/templates/academic-board/EvaluationLowScoreEmail";
-
-// Server function to render React Email component to static HTML string
-export const getEmailPreviewHtmlFn = createServerFn({ method: "GET" })
-  .validator((val: unknown) => {
-    return val as { template: string; score: number };
-  })
-  .handler(async ({ data }) => {
-    const { template, score } = data;
-    const studentName = "Divya";
-    const totalMarks = 100;
-    const percentage = score;
-    const evaluationName = "Final Entrepreneurship Evaluation";
-    const dashboardUrl = "http://localhost:3000/result";
-
-    let component: React.ReactElement;
-
-    switch (template) {
-      case "student":
-        component = (
-          <EvaluationResultEmail
-            studentName={studentName}
-            score={score}
-            totalMarks={totalMarks}
-            percentage={percentage}
-            evaluationName={evaluationName}
-            dashboardUrl={dashboardUrl}
-          />
-        );
-        break;
-      case "mentor-follow-up":
-        component = (
-          <EvaluationFollowUpEmail
-            studentName={studentName}
-            score={score}
-            totalMarks={totalMarks}
-            percentage={percentage}
-            evaluationName={evaluationName}
-            dashboardUrl={dashboardUrl}
-          />
-        );
-        break;
-      case "mentor-low":
-        component = (
-          <EvaluationLowScoreEmail
-            studentName={studentName}
-            score={score}
-            totalMarks={totalMarks}
-            percentage={percentage}
-            evaluationName={evaluationName}
-            dashboardUrl={dashboardUrl}
-          />
-        );
-        break;
-      case "board":
-        component = (
-          <AcademicBoardLowScoreEmail
-            studentName={studentName}
-            studentEmail="divyapahuja250@gmail.com"
-            batch="2024–2028"
-            score={score}
-            totalMarks={totalMarks}
-            percentage={percentage}
-            mentorName="Raghav Khandelwal"
-            evaluationName={evaluationName}
-            dashboardUrl={dashboardUrl}
-          />
-        );
-        break;
-      default:
-        throw new Error("Invalid template");
-    }
-
-    const html = await render(component);
-    return { html };
-  });
+import { getEmailPreviewHtmlFn } from "@/lib/email/preview.actions";
 
 export const Route = createFileRoute("/email-preview")({
   component: EmailPreviewPage,
@@ -168,6 +88,15 @@ function EmailPreviewPage() {
             >
               Academic Board Low (&le;40%)
             </button>
+            <button
+              onClick={() => setTemplate("password-reset")}
+              style={{
+                ...templateButton,
+                ...(template === "password-reset" ? activeTemplateButton : {}),
+              }}
+            >
+              Password Reset
+            </button>
           </div>
 
           <h2 style={sectionTitle}>Adjust Score ({score}%)</h2>
@@ -214,11 +143,7 @@ function EmailPreviewPage() {
           {loading ? (
             <div style={loader}>Loading preview...</div>
           ) : (
-            <iframe
-              srcDoc={html}
-              style={iframePreview}
-              title="Email Preview"
-            />
+            <iframe srcDoc={html} style={iframePreview} title="Email Preview" />
           )}
         </div>
       </div>

@@ -111,6 +111,48 @@ export type Database = {
         };
         Relationships: [];
       };
+      email_notifications: {
+        Row: {
+          created_at: string;
+          error: string | null;
+          id: string;
+          provider: string;
+          provider_message_id: string | null;
+          recipient_email: string;
+          recipient_user_id: string | null;
+          sent_at: string | null;
+          status: Database["public"]["Enums"]["email_notification_status"];
+          subject: string;
+          type: Database["public"]["Enums"]["email_notification_type"];
+        };
+        Insert: {
+          created_at?: string;
+          error?: string | null;
+          id?: string;
+          provider?: string;
+          provider_message_id?: string | null;
+          recipient_email: string;
+          recipient_user_id?: string | null;
+          sent_at?: string | null;
+          status?: Database["public"]["Enums"]["email_notification_status"];
+          subject: string;
+          type: Database["public"]["Enums"]["email_notification_type"];
+        };
+        Update: {
+          created_at?: string;
+          error?: string | null;
+          id?: string;
+          provider?: string;
+          provider_message_id?: string | null;
+          recipient_email?: string;
+          recipient_user_id?: string | null;
+          sent_at?: string | null;
+          status?: Database["public"]["Enums"]["email_notification_status"];
+          subject?: string;
+          type?: Database["public"]["Enums"]["email_notification_type"];
+        };
+        Relationships: [];
+      };
       evaluations: {
         Row: {
           course_id: string;
@@ -509,6 +551,12 @@ export type Database = {
     };
     Enums: {
       app_role: "admin" | "academic_board" | "mentor" | "student";
+      email_notification_status: "PENDING" | "SENT" | "FAILED";
+      email_notification_type:
+        | "KPI_SCORED_STUDENT"
+        | "CONSECUTIVE_LOW_SCORE_BOARD"
+        | "CONSECUTIVE_MID_SCORE_MENTOR"
+        | "PASSWORD_RESET";
       proposal_state: "pending" | "rejected" | "accepted";
     };
     CompositeTypes: {

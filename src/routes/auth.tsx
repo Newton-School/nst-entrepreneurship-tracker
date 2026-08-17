@@ -103,6 +103,14 @@ function AuthPage() {
                 onChange={setPassword}
                 type="password"
               />
+              <div className="flex justify-end">
+                <Link
+                  to="/forgot-password"
+                  className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground"
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <Button
                 type="submit"
                 disabled={busy}

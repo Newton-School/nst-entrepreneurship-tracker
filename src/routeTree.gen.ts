@@ -15,6 +15,7 @@ import { Route as SyllabusRouteImport } from './routes/syllabus'
 import { Route as StartupResidencyRouteImport } from './routes/startup-residency'
 import { Route as RoadmapRouteImport } from './routes/roadmap'
 import { Route as ResultRouteImport } from './routes/result'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ProposalRouteImport } from './routes/proposal'
 import { Route as ProgramGovernanceRouteImport } from './routes/program-governance'
 import { Route as PhilosophyRouteImport } from './routes/philosophy'
@@ -24,6 +25,7 @@ import { Route as ManageResultRouteImport } from './routes/manageResult'
 import { Route as IndustryReadinessRouteImport } from './routes/industry-readiness'
 import { Route as IndustryPartnerRouteImport } from './routes/industry-partner'
 import { Route as FounderReviewRouteImport } from './routes/founder-review'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as EvaluationRouteImport } from './routes/evaluation'
 import { Route as EmailPreviewRouteImport } from './routes/email-preview'
 import { Route as CreditMappingRouteImport } from './routes/credit-mapping'
@@ -63,6 +65,11 @@ const RoadmapRoute = RoadmapRouteImport.update({
 const ResultRoute = ResultRouteImport.update({
   id: '/result',
   path: '/result',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProposalRoute = ProposalRouteImport.update({
@@ -108,6 +115,11 @@ const IndustryPartnerRoute = IndustryPartnerRouteImport.update({
 const FounderReviewRoute = FounderReviewRouteImport.update({
   id: '/founder-review',
   path: '/founder-review',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EvaluationRoute = EvaluationRouteImport.update({
@@ -171,6 +183,7 @@ export interface FileRoutesByFullPath {
   '/credit-mapping': typeof CreditMappingRoute
   '/email-preview': typeof EmailPreviewRoute
   '/evaluation': typeof EvaluationRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/founder-review': typeof FounderReviewRoute
   '/industry-partner': typeof IndustryPartnerRoute
   '/industry-readiness': typeof IndustryReadinessRoute
@@ -180,6 +193,7 @@ export interface FileRoutesByFullPath {
   '/philosophy': typeof PhilosophyRoute
   '/program-governance': typeof ProgramGovernanceRoute
   '/proposal': typeof ProposalRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/result': typeof ResultRoute
   '/roadmap': typeof RoadmapRoute
   '/startup-residency': typeof StartupResidencyRoute
@@ -198,6 +212,7 @@ export interface FileRoutesByTo {
   '/credit-mapping': typeof CreditMappingRoute
   '/email-preview': typeof EmailPreviewRoute
   '/evaluation': typeof EvaluationRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/founder-review': typeof FounderReviewRoute
   '/industry-partner': typeof IndustryPartnerRoute
   '/industry-readiness': typeof IndustryReadinessRoute
@@ -207,6 +222,7 @@ export interface FileRoutesByTo {
   '/philosophy': typeof PhilosophyRoute
   '/program-governance': typeof ProgramGovernanceRoute
   '/proposal': typeof ProposalRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/result': typeof ResultRoute
   '/roadmap': typeof RoadmapRoute
   '/startup-residency': typeof StartupResidencyRoute
@@ -226,6 +242,7 @@ export interface FileRoutesById {
   '/credit-mapping': typeof CreditMappingRoute
   '/email-preview': typeof EmailPreviewRoute
   '/evaluation': typeof EvaluationRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/founder-review': typeof FounderReviewRoute
   '/industry-partner': typeof IndustryPartnerRoute
   '/industry-readiness': typeof IndustryReadinessRoute
@@ -235,6 +252,7 @@ export interface FileRoutesById {
   '/philosophy': typeof PhilosophyRoute
   '/program-governance': typeof ProgramGovernanceRoute
   '/proposal': typeof ProposalRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/result': typeof ResultRoute
   '/roadmap': typeof RoadmapRoute
   '/startup-residency': typeof StartupResidencyRoute
@@ -255,6 +273,7 @@ export interface FileRouteTypes {
     | '/credit-mapping'
     | '/email-preview'
     | '/evaluation'
+    | '/forgot-password'
     | '/founder-review'
     | '/industry-partner'
     | '/industry-readiness'
@@ -264,6 +283,7 @@ export interface FileRouteTypes {
     | '/philosophy'
     | '/program-governance'
     | '/proposal'
+    | '/reset-password'
     | '/result'
     | '/roadmap'
     | '/startup-residency'
@@ -282,6 +302,7 @@ export interface FileRouteTypes {
     | '/credit-mapping'
     | '/email-preview'
     | '/evaluation'
+    | '/forgot-password'
     | '/founder-review'
     | '/industry-partner'
     | '/industry-readiness'
@@ -291,6 +312,7 @@ export interface FileRouteTypes {
     | '/philosophy'
     | '/program-governance'
     | '/proposal'
+    | '/reset-password'
     | '/result'
     | '/roadmap'
     | '/startup-residency'
@@ -309,6 +331,7 @@ export interface FileRouteTypes {
     | '/credit-mapping'
     | '/email-preview'
     | '/evaluation'
+    | '/forgot-password'
     | '/founder-review'
     | '/industry-partner'
     | '/industry-readiness'
@@ -318,6 +341,7 @@ export interface FileRouteTypes {
     | '/philosophy'
     | '/program-governance'
     | '/proposal'
+    | '/reset-password'
     | '/result'
     | '/roadmap'
     | '/startup-residency'
@@ -337,6 +361,7 @@ export interface RootRouteChildren {
   CreditMappingRoute: typeof CreditMappingRoute
   EmailPreviewRoute: typeof EmailPreviewRoute
   EvaluationRoute: typeof EvaluationRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   FounderReviewRoute: typeof FounderReviewRoute
   IndustryPartnerRoute: typeof IndustryPartnerRoute
   IndustryReadinessRoute: typeof IndustryReadinessRoute
@@ -346,6 +371,7 @@ export interface RootRouteChildren {
   PhilosophyRoute: typeof PhilosophyRoute
   ProgramGovernanceRoute: typeof ProgramGovernanceRoute
   ProposalRoute: typeof ProposalRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   ResultRoute: typeof ResultRoute
   RoadmapRoute: typeof RoadmapRoute
   StartupResidencyRoute: typeof StartupResidencyRoute
@@ -397,6 +423,13 @@ declare module '@tanstack/react-router' {
       path: '/result'
       fullPath: '/result'
       preLoaderRoute: typeof ResultRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/proposal': {
@@ -460,6 +493,13 @@ declare module '@tanstack/react-router' {
       path: '/founder-review'
       fullPath: '/founder-review'
       preLoaderRoute: typeof FounderReviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/evaluation': {
@@ -545,6 +585,7 @@ const rootRouteChildren: RootRouteChildren = {
   CreditMappingRoute: CreditMappingRoute,
   EmailPreviewRoute: EmailPreviewRoute,
   EvaluationRoute: EvaluationRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   FounderReviewRoute: FounderReviewRoute,
   IndustryPartnerRoute: IndustryPartnerRoute,
   IndustryReadinessRoute: IndustryReadinessRoute,
@@ -554,6 +595,7 @@ const rootRouteChildren: RootRouteChildren = {
   PhilosophyRoute: PhilosophyRoute,
   ProgramGovernanceRoute: ProgramGovernanceRoute,
   ProposalRoute: ProposalRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   ResultRoute: ResultRoute,
   RoadmapRoute: RoadmapRoute,
   StartupResidencyRoute: StartupResidencyRoute,

@@ -5,7 +5,6 @@ import {
   ChevronDown,
   ChevronRight,
   Plus,
-  ShieldCheck,
   Sparkles,
   Trash2,
   Loader2,
@@ -14,6 +13,7 @@ import {
   ShieldAlert,
   X,
   Pencil,
+  Upload,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { GradeDialog, type GradeTarget } from "@/components/kpi/GradeDialog";
+import { KpiSubmissionModal, type KpiModalTarget } from "@/components/kpi/KpiSubmissionModal";
 import { canAddKpi, canEditKpi, canManageVentures, type Actor } from "@/lib/permissions";
 
 interface ResultSearch {
@@ -139,8 +139,8 @@ function Page() {
   const [subgradesList, setSubgradesList] = useState<Subcategory[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  const [gradeTarget, setGradeTarget] = useState<GradeTarget | null>(null);
-  const [gradeOpen, setGradeOpen] = useState(false);
+  const [submissionModalTarget, setSubmissionModalTarget] = useState<KpiModalTarget | null>(null);
+  const [submissionModalOpen, setSubmissionModalOpen] = useState(false);
 
   const actor: Actor | null = user && role ? { userId: user.id, role } : null;
 
@@ -154,8 +154,8 @@ function Page() {
     }
   }, [user, authLoading, studentId, canEdit]);
 
-  const fetchVentureData = async () => {
-    setLoading(true);
+  const fetchVentureData = async (showSpinner = true) => {
+    if (showSpinner) setLoading(true);
     setAccessDeniedMessage(null);
     try {
       let query = supabase
@@ -634,10 +634,10 @@ function Page() {
                 <div>
                   {/* Header */}
                   <div className="grid grid-cols-12 gap-3 border-b border-border/50 bg-background/40 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-                    <div className="col-span-7 sm:col-span-8">KPI</div>
-                    <div className="col-span-2">Score</div>
-                    <div className="col-span-2 sm:col-span-1">Total</div>
-                    {canEdit && <div className="col-span-1 text-right">Action</div>}
+                    <div className="col-span-5 sm:col-span-5">KPI</div>
+                    <div className="col-span-2 sm:col-span-2">Score</div>
+                    <div className="col-span-2 sm:col-span-2">Total</div>
+                    <div className="col-span-3 sm:col-span-3 text-right">Action</div>
                   </div>
 
                   {/* KPI List */}
@@ -681,7 +681,7 @@ function Page() {
                               hasSubcategories ? "cursor-pointer hover:bg-background/60" : ""
                             }`}
                           >
-                            <div className="col-span-7 sm:col-span-8">
+                            <div className="col-span-5 sm:col-span-5">
                               <div className="flex items-center gap-2">
                                 {hasSubcategories &&
                                   (isOpen ? (
@@ -694,7 +694,7 @@ function Page() {
                                   <Lock className="h-3 w-3 shrink-0 text-amber-400" />
                                 )}
                               </div>
-                              <div className="mt-0.5 flex flex-wrap items-center gap-2 pl-6 font-mono text-[10px] text-muted-foreground/70">
+                              <div className="mt-1 flex flex-wrap items-center gap-2 pl-6 font-mono text-[10px] text-muted-foreground/70">
                                 {kpi.dueDate && (
                                   <span className={overdue ? "text-amber-400" : undefined}>
                                     Due {new Date(kpi.dueDate).toLocaleDateString()}
@@ -703,62 +703,75 @@ function Page() {
                                 {kpi.score === null && !kpi.isLocked && <span>Not scored</span>}
                               </div>
                             </div>
-                            <div className="col-span-2 font-mono text-xs text-muted-foreground">
+
+                            <div className="col-span-2 sm:col-span-2 font-mono text-xs text-muted-foreground">
                               {kpi.score ?? "—"}
                             </div>
-                            <div className="col-span-2 font-mono text-xs text-muted-foreground sm:col-span-1">
+
+                            <div className="col-span-2 sm:col-span-2 font-mono text-xs text-muted-foreground">
                               {kpi.totalGrade}
                             </div>
 
-                            {canEdit && (
-                              <div className="col-span-1 flex items-center justify-end gap-1 text-right">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setGradeTarget({
-                                      kpiId: kpi.id,
-                                      ventureId: venture.id,
-                                      name: kpi.name,
-                                      score: kpi.score,
-                                      totalGrade: kpi.totalGrade,
-                                      feedback: kpi.feedback,
-                                      isLocked: kpi.isLocked,
-                                      ventureMentorId: venture.mentorId,
-                                    });
-                                    setGradeOpen(true);
-                                  }}
-                                  className="cursor-pointer p-1 text-muted-foreground transition-colors hover:text-primary"
-                                  title="Evaluate"
-                                >
-                                  <ShieldCheck className="h-3.5 w-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={!mayEdit}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleOpenEditKpi(kpi, venture.id);
-                                  }}
-                                  className="cursor-pointer p-1 text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
-                                  title={mayEdit ? "Edit KPI" : "Locked or not your mentee"}
-                                >
-                                  <Pencil className="h-3.5 w-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={!mayEdit}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteKpi(kpi.id, kpi.name, venture.id);
-                                  }}
-                                  className="cursor-pointer p-1 text-muted-foreground transition-colors hover:text-destructive disabled:cursor-not-allowed disabled:opacity-30"
-                                  title={mayEdit ? "Delete KPI" : "Locked or not your mentee"}
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
-                            )}
+                            <div className="col-span-3 sm:col-span-3 flex items-center justify-end gap-1.5 text-right">
+                              <button
+                                type="button"
+                                disabled={kpi.isLocked}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSubmissionModalTarget({
+                                    kpiId: kpi.id,
+                                    ventureId: venture.id,
+                                    name: kpi.name,
+                                    score: kpi.score,
+                                    totalGrade: kpi.totalGrade,
+                                    obtainGrade: kpi.obtainGrade,
+                                    feedback: kpi.feedback,
+                                    isLocked: kpi.isLocked,
+                                    dueDate: kpi.dueDate,
+                                    subject: venture.subject,
+                                    studentName: venture.studentName,
+                                    rollNo: venture.rollNo,
+                                    studentId: venture.userId,
+                                    ventureMentorId: venture.mentorId,
+                                  });
+                                  setSubmissionModalOpen(true);
+                                }}
+                                className="inline-flex items-center gap-1 rounded-md border border-primary/40 bg-primary/10 px-2 py-1 text-[10px] font-mono text-primary hover:bg-primary/20 cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-primary/10"
+                                title={kpi.isLocked ? "Score locked - Submission closed" : "Upload Evidence / Review"}
+                              >
+                                <Upload className="h-3 w-3 shrink-0" />
+                                <span>{!canEdit ? "Upload Evidence" : "Review"}</span>
+                              </button>
+
+                              {canEdit && (
+                                <>
+                                  <button
+                                    type="button"
+                                    disabled={!mayEdit}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenEditKpi(kpi, venture.id);
+                                    }}
+                                    className="cursor-pointer p-1 text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+                                    title={mayEdit ? "Edit KPI" : "Locked or not your mentee"}
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={!mayEdit}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteKpi(kpi.id, kpi.name, venture.id);
+                                    }}
+                                    className="cursor-pointer p-1 text-muted-foreground transition-colors hover:text-destructive disabled:cursor-not-allowed disabled:opacity-30"
+                                    title={mayEdit ? "Delete KPI" : "Locked or not your mentee"}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </>
+                              )}
+                            </div>
                           </div>
 
                           {kpi.feedback && (
@@ -981,12 +994,13 @@ function Page() {
           </DialogContent>
         </Dialog>
 
-        <GradeDialog
-          target={gradeTarget}
-          open={gradeOpen}
-          onOpenChange={setGradeOpen}
+        <KpiSubmissionModal
+          target={submissionModalTarget}
+          open={submissionModalOpen}
+          onOpenChange={setSubmissionModalOpen}
           actor={actor}
-          onSaved={fetchVentureData}
+          isStudentView={!canEdit}
+          onSaved={() => fetchVentureData(false)}
         />
       </main>
     </>

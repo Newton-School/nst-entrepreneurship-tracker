@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Loader2, CheckCircle2, XCircle, Clock, Check, X } from "lucide-react";
-import { fetchMentors, fetchProposals } from "./proposal.functions";
+import { fetchMentors, fetchProposals } from "./-proposal.functions";
 
 export const Route = createFileRoute("/proposal")({
   ssr: false,

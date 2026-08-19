@@ -9,152 +9,37 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as AdminRouteImport } from './routes/admin'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as CareerOutcomesRouteImport } from './routes/career-outcomes'
-import { Route as CohortPlannerRouteImport } from './routes/cohort-planner'
-import { Route as CommandCenterRouteImport } from './routes/command-center'
-import { Route as CreditMappingRouteImport } from './routes/credit-mapping'
-import { Route as EmailPreviewRouteImport } from './routes/email-preview'
-import { Route as EvaluationRouteImport } from './routes/evaluation'
-import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
-import { Route as FounderReviewRouteImport } from './routes/founder-review'
-import { Route as IndustryPartnerRouteImport } from './routes/industry-partner'
-import { Route as IndustryReadinessRouteImport } from './routes/industry-readiness'
-import { Route as ManageResultRouteImport } from './routes/manageResult'
-import { Route as MentorFrameworkRouteImport } from './routes/mentor-framework'
-import { Route as OutcomesRouteImport } from './routes/outcomes'
-import { Route as PhilosophyRouteImport } from './routes/philosophy'
-import { Route as ProgramGovernanceRouteImport } from './routes/program-governance'
-import { Route as ProposalRouteImport } from './routes/proposal'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as ResultRouteImport } from './routes/result'
-import { Route as RoadmapRouteImport } from './routes/roadmap'
-import { Route as StartupResidencyRouteImport } from './routes/startup-residency'
-import { Route as SyllabusRouteImport } from './routes/syllabus'
-import { Route as SyllabusOverviewRouteImport } from './routes/syllabus-overview'
 import { Route as WeeklyFrameworkRouteImport } from './routes/weekly-framework'
+import { Route as SyllabusOverviewRouteImport } from './routes/syllabus-overview'
+import { Route as SyllabusRouteImport } from './routes/syllabus'
+import { Route as StartupResidencyRouteImport } from './routes/startup-residency'
+import { Route as RoadmapRouteImport } from './routes/roadmap'
+import { Route as ResultRouteImport } from './routes/result'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as ProposalRouteImport } from './routes/proposal'
+import { Route as ProgramGovernanceRouteImport } from './routes/program-governance'
+import { Route as PhilosophyRouteImport } from './routes/philosophy'
+import { Route as OutcomesRouteImport } from './routes/outcomes'
+import { Route as MentorFrameworkRouteImport } from './routes/mentor-framework'
+import { Route as ManageResultRouteImport } from './routes/manageResult'
+import { Route as IndustryReadinessRouteImport } from './routes/industry-readiness'
+import { Route as IndustryPartnerRouteImport } from './routes/industry-partner'
+import { Route as FounderReviewRouteImport } from './routes/founder-review'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as EvaluationRouteImport } from './routes/evaluation'
+import { Route as EmailPreviewRouteImport } from './routes/email-preview'
+import { Route as CreditMappingRouteImport } from './routes/credit-mapping'
+import { Route as CommandCenterRouteImport } from './routes/command-center'
+import { Route as CohortPlannerRouteImport } from './routes/cohort-planner'
+import { Route as CareerOutcomesRouteImport } from './routes/career-outcomes'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as CourseCourseIdRouteImport } from './routes/course.$courseId'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminRoute = AdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CareerOutcomesRoute = CareerOutcomesRouteImport.update({
-  id: '/career-outcomes',
-  path: '/career-outcomes',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CohortPlannerRoute = CohortPlannerRouteImport.update({
-  id: '/cohort-planner',
-  path: '/cohort-planner',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CommandCenterRoute = CommandCenterRouteImport.update({
-  id: '/command-center',
-  path: '/command-center',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CreditMappingRoute = CreditMappingRouteImport.update({
-  id: '/credit-mapping',
-  path: '/credit-mapping',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EmailPreviewRoute = EmailPreviewRouteImport.update({
-  id: '/email-preview',
-  path: '/email-preview',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EvaluationRoute = EvaluationRouteImport.update({
-  id: '/evaluation',
-  path: '/evaluation',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
-  id: '/forgot-password',
-  path: '/forgot-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FounderReviewRoute = FounderReviewRouteImport.update({
-  id: '/founder-review',
-  path: '/founder-review',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const IndustryPartnerRoute = IndustryPartnerRouteImport.update({
-  id: '/industry-partner',
-  path: '/industry-partner',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const IndustryReadinessRoute = IndustryReadinessRouteImport.update({
-  id: '/industry-readiness',
-  path: '/industry-readiness',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ManageResultRoute = ManageResultRouteImport.update({
-  id: '/manageResult',
-  path: '/manageResult',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MentorFrameworkRoute = MentorFrameworkRouteImport.update({
-  id: '/mentor-framework',
-  path: '/mentor-framework',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OutcomesRoute = OutcomesRouteImport.update({
-  id: '/outcomes',
-  path: '/outcomes',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PhilosophyRoute = PhilosophyRouteImport.update({
-  id: '/philosophy',
-  path: '/philosophy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProgramGovernanceRoute = ProgramGovernanceRouteImport.update({
-  id: '/program-governance',
-  path: '/program-governance',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProposalRoute = ProposalRouteImport.update({
-  id: '/proposal',
-  path: '/proposal',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResultRoute = ResultRouteImport.update({
-  id: '/result',
-  path: '/result',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RoadmapRoute = RoadmapRouteImport.update({
-  id: '/roadmap',
-  path: '/roadmap',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const StartupResidencyRoute = StartupResidencyRouteImport.update({
-  id: '/startup-residency',
-  path: '/startup-residency',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SyllabusRoute = SyllabusRouteImport.update({
-  id: '/syllabus',
-  path: '/syllabus',
+const WeeklyFrameworkRoute = WeeklyFrameworkRouteImport.update({
+  id: '/weekly-framework',
+  path: '/weekly-framework',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SyllabusOverviewRoute = SyllabusOverviewRouteImport.update({
@@ -162,9 +47,124 @@ const SyllabusOverviewRoute = SyllabusOverviewRouteImport.update({
   path: '/syllabus-overview',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WeeklyFrameworkRoute = WeeklyFrameworkRouteImport.update({
-  id: '/weekly-framework',
-  path: '/weekly-framework',
+const SyllabusRoute = SyllabusRouteImport.update({
+  id: '/syllabus',
+  path: '/syllabus',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StartupResidencyRoute = StartupResidencyRouteImport.update({
+  id: '/startup-residency',
+  path: '/startup-residency',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RoadmapRoute = RoadmapRouteImport.update({
+  id: '/roadmap',
+  path: '/roadmap',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResultRoute = ResultRouteImport.update({
+  id: '/result',
+  path: '/result',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProposalRoute = ProposalRouteImport.update({
+  id: '/proposal',
+  path: '/proposal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProgramGovernanceRoute = ProgramGovernanceRouteImport.update({
+  id: '/program-governance',
+  path: '/program-governance',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PhilosophyRoute = PhilosophyRouteImport.update({
+  id: '/philosophy',
+  path: '/philosophy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OutcomesRoute = OutcomesRouteImport.update({
+  id: '/outcomes',
+  path: '/outcomes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MentorFrameworkRoute = MentorFrameworkRouteImport.update({
+  id: '/mentor-framework',
+  path: '/mentor-framework',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ManageResultRoute = ManageResultRouteImport.update({
+  id: '/manageResult',
+  path: '/manageResult',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IndustryReadinessRoute = IndustryReadinessRouteImport.update({
+  id: '/industry-readiness',
+  path: '/industry-readiness',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IndustryPartnerRoute = IndustryPartnerRouteImport.update({
+  id: '/industry-partner',
+  path: '/industry-partner',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FounderReviewRoute = FounderReviewRouteImport.update({
+  id: '/founder-review',
+  path: '/founder-review',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EvaluationRoute = EvaluationRouteImport.update({
+  id: '/evaluation',
+  path: '/evaluation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmailPreviewRoute = EmailPreviewRouteImport.update({
+  id: '/email-preview',
+  path: '/email-preview',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreditMappingRoute = CreditMappingRouteImport.update({
+  id: '/credit-mapping',
+  path: '/credit-mapping',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CommandCenterRoute = CommandCenterRouteImport.update({
+  id: '/command-center',
+  path: '/command-center',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CohortPlannerRoute = CohortPlannerRouteImport.update({
+  id: '/cohort-planner',
+  path: '/cohort-planner',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CareerOutcomesRoute = CareerOutcomesRouteImport.update({
+  id: '/career-outcomes',
+  path: '/career-outcomes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CourseCourseIdRoute = CourseCourseIdRouteImport.update({
@@ -383,172 +383,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/career-outcomes': {
-      id: '/career-outcomes'
-      path: '/career-outcomes'
-      fullPath: '/career-outcomes'
-      preLoaderRoute: typeof CareerOutcomesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/cohort-planner': {
-      id: '/cohort-planner'
-      path: '/cohort-planner'
-      fullPath: '/cohort-planner'
-      preLoaderRoute: typeof CohortPlannerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/command-center': {
-      id: '/command-center'
-      path: '/command-center'
-      fullPath: '/command-center'
-      preLoaderRoute: typeof CommandCenterRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/credit-mapping': {
-      id: '/credit-mapping'
-      path: '/credit-mapping'
-      fullPath: '/credit-mapping'
-      preLoaderRoute: typeof CreditMappingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/email-preview': {
-      id: '/email-preview'
-      path: '/email-preview'
-      fullPath: '/email-preview'
-      preLoaderRoute: typeof EmailPreviewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/evaluation': {
-      id: '/evaluation'
-      path: '/evaluation'
-      fullPath: '/evaluation'
-      preLoaderRoute: typeof EvaluationRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/forgot-password': {
-      id: '/forgot-password'
-      path: '/forgot-password'
-      fullPath: '/forgot-password'
-      preLoaderRoute: typeof ForgotPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/founder-review': {
-      id: '/founder-review'
-      path: '/founder-review'
-      fullPath: '/founder-review'
-      preLoaderRoute: typeof FounderReviewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/industry-partner': {
-      id: '/industry-partner'
-      path: '/industry-partner'
-      fullPath: '/industry-partner'
-      preLoaderRoute: typeof IndustryPartnerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/industry-readiness': {
-      id: '/industry-readiness'
-      path: '/industry-readiness'
-      fullPath: '/industry-readiness'
-      preLoaderRoute: typeof IndustryReadinessRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/manageResult': {
-      id: '/manageResult'
-      path: '/manageResult'
-      fullPath: '/manageResult'
-      preLoaderRoute: typeof ManageResultRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/mentor-framework': {
-      id: '/mentor-framework'
-      path: '/mentor-framework'
-      fullPath: '/mentor-framework'
-      preLoaderRoute: typeof MentorFrameworkRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/outcomes': {
-      id: '/outcomes'
-      path: '/outcomes'
-      fullPath: '/outcomes'
-      preLoaderRoute: typeof OutcomesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/philosophy': {
-      id: '/philosophy'
-      path: '/philosophy'
-      fullPath: '/philosophy'
-      preLoaderRoute: typeof PhilosophyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/program-governance': {
-      id: '/program-governance'
-      path: '/program-governance'
-      fullPath: '/program-governance'
-      preLoaderRoute: typeof ProgramGovernanceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/proposal': {
-      id: '/proposal'
-      path: '/proposal'
-      fullPath: '/proposal'
-      preLoaderRoute: typeof ProposalRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/result': {
-      id: '/result'
-      path: '/result'
-      fullPath: '/result'
-      preLoaderRoute: typeof ResultRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/roadmap': {
-      id: '/roadmap'
-      path: '/roadmap'
-      fullPath: '/roadmap'
-      preLoaderRoute: typeof RoadmapRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/startup-residency': {
-      id: '/startup-residency'
-      path: '/startup-residency'
-      fullPath: '/startup-residency'
-      preLoaderRoute: typeof StartupResidencyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/syllabus': {
-      id: '/syllabus'
-      path: '/syllabus'
-      fullPath: '/syllabus'
-      preLoaderRoute: typeof SyllabusRouteImport
+    '/weekly-framework': {
+      id: '/weekly-framework'
+      path: '/weekly-framework'
+      fullPath: '/weekly-framework'
+      preLoaderRoute: typeof WeeklyFrameworkRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/syllabus-overview': {
@@ -558,11 +397,172 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SyllabusOverviewRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/weekly-framework': {
-      id: '/weekly-framework'
-      path: '/weekly-framework'
-      fullPath: '/weekly-framework'
-      preLoaderRoute: typeof WeeklyFrameworkRouteImport
+    '/syllabus': {
+      id: '/syllabus'
+      path: '/syllabus'
+      fullPath: '/syllabus'
+      preLoaderRoute: typeof SyllabusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/startup-residency': {
+      id: '/startup-residency'
+      path: '/startup-residency'
+      fullPath: '/startup-residency'
+      preLoaderRoute: typeof StartupResidencyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/roadmap': {
+      id: '/roadmap'
+      path: '/roadmap'
+      fullPath: '/roadmap'
+      preLoaderRoute: typeof RoadmapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/result': {
+      id: '/result'
+      path: '/result'
+      fullPath: '/result'
+      preLoaderRoute: typeof ResultRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/proposal': {
+      id: '/proposal'
+      path: '/proposal'
+      fullPath: '/proposal'
+      preLoaderRoute: typeof ProposalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/program-governance': {
+      id: '/program-governance'
+      path: '/program-governance'
+      fullPath: '/program-governance'
+      preLoaderRoute: typeof ProgramGovernanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/philosophy': {
+      id: '/philosophy'
+      path: '/philosophy'
+      fullPath: '/philosophy'
+      preLoaderRoute: typeof PhilosophyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/outcomes': {
+      id: '/outcomes'
+      path: '/outcomes'
+      fullPath: '/outcomes'
+      preLoaderRoute: typeof OutcomesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mentor-framework': {
+      id: '/mentor-framework'
+      path: '/mentor-framework'
+      fullPath: '/mentor-framework'
+      preLoaderRoute: typeof MentorFrameworkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manageResult': {
+      id: '/manageResult'
+      path: '/manageResult'
+      fullPath: '/manageResult'
+      preLoaderRoute: typeof ManageResultRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/industry-readiness': {
+      id: '/industry-readiness'
+      path: '/industry-readiness'
+      fullPath: '/industry-readiness'
+      preLoaderRoute: typeof IndustryReadinessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/industry-partner': {
+      id: '/industry-partner'
+      path: '/industry-partner'
+      fullPath: '/industry-partner'
+      preLoaderRoute: typeof IndustryPartnerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/founder-review': {
+      id: '/founder-review'
+      path: '/founder-review'
+      fullPath: '/founder-review'
+      preLoaderRoute: typeof FounderReviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/evaluation': {
+      id: '/evaluation'
+      path: '/evaluation'
+      fullPath: '/evaluation'
+      preLoaderRoute: typeof EvaluationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/email-preview': {
+      id: '/email-preview'
+      path: '/email-preview'
+      fullPath: '/email-preview'
+      preLoaderRoute: typeof EmailPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/credit-mapping': {
+      id: '/credit-mapping'
+      path: '/credit-mapping'
+      fullPath: '/credit-mapping'
+      preLoaderRoute: typeof CreditMappingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/command-center': {
+      id: '/command-center'
+      path: '/command-center'
+      fullPath: '/command-center'
+      preLoaderRoute: typeof CommandCenterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cohort-planner': {
+      id: '/cohort-planner'
+      path: '/cohort-planner'
+      fullPath: '/cohort-planner'
+      preLoaderRoute: typeof CohortPlannerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/career-outcomes': {
+      id: '/career-outcomes'
+      path: '/career-outcomes'
+      fullPath: '/career-outcomes'
+      preLoaderRoute: typeof CareerOutcomesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/course/$courseId': {

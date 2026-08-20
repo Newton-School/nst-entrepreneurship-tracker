@@ -30,14 +30,25 @@ export async function processUploadSubmission(params: {
   mimeType: string;
   authHeader?: string;
 }) {
-  const { kpiId, ventureId, studentId = "", note, fileBuffer, fileName, mimeType, authHeader } = params;
+  const {
+    kpiId,
+    ventureId,
+    studentId = "",
+    note,
+    fileBuffer,
+    fileName,
+    mimeType,
+    authHeader,
+  } = params;
 
   if (!kpiId || !ventureId) {
     throw new Error("Missing required kpiId or ventureId.");
   }
 
   if (note.length > MAX_NOTE_LENGTH) {
-    throw new Error(`Supporting explanation exceeds maximum limit of ${MAX_NOTE_LENGTH} characters.`);
+    throw new Error(
+      `Supporting explanation exceeds maximum limit of ${MAX_NOTE_LENGTH} characters.`,
+    );
   }
 
   const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
@@ -62,12 +73,15 @@ export async function processUploadSubmission(params: {
     }
   }
 
+  console.log("kpiId", kpiId);
   // Fetch KPI details to enforce rules
   const { data: kpi, error: kpiErr } = await supabase
     .from("venture_kpis")
     .select("id, venture_id, is_locked, due_date, score")
     .eq("id", kpiId)
     .single();
+
+  console.log("kpiId:", kpi);
 
   if (kpiErr || !kpi) {
     throw new Error("Target KPI record not found.");
@@ -102,13 +116,15 @@ export async function processUploadSubmission(params: {
   if (fileBuffer && fileName) {
     if (fileBuffer.length > MAX_FILE_SIZE) {
       throw new Error(
-        `File exceeds 10 MB maximum limit (${(fileBuffer.length / (1024 * 1024)).toFixed(1)} MB).`
+        `File exceeds 10 MB maximum limit (${(fileBuffer.length / (1024 * 1024)).toFixed(1)} MB).`,
       );
     }
 
     const ext = fileName.split(".").pop()?.toLowerCase() || "";
     if (!ALLOWED_EXTENSIONS.has(ext)) {
-      throw new Error(`File format '.${ext}' is unsupported. Please upload a Document or ZIP file.`);
+      throw new Error(
+        `File format '.${ext}' is unsupported. Please upload a Document or ZIP file.`,
+      );
     }
 
     const oldStoragePath = existingSub?.storage_path;

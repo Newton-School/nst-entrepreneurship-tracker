@@ -80,6 +80,12 @@ export const sendLockedKpiEmailsFn = createServerFn({ method: "POST" })
         console.warn(`[EmailActions] Student email not found for venture ${ventureId}`);
       }
 
+      // Helper: Check for valid UUID format
+      function isValidUuid(id?: string | null): boolean {
+        if (!id || typeof id !== "string") return false;
+        return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id.trim());
+      }
+
       // 4. Fetch Academic Board emails dynamically
       const { data: boardRoles } = await supabaseAdmin
         .from("user_roles")
@@ -90,92 +96,193 @@ export const sendLockedKpiEmailsFn = createServerFn({ method: "POST" })
         .map((r: any) => r.email)
         .filter(Boolean) as string[];
 
-      // 5. Fetch Mentor name and email
-      const { data: mentorRole } = await supabaseAdmin
-        .from("user_roles")
-        .select("email")
-        .eq("user_id", mentorUserId)
-        .maybeSingle();
+      // 5. Fetch Mentor details (with UUID safety & fallbacks)
+      let assignedMentorEmail: string | null = null;
+      let assignedMentorName: string = "Mentor";
 
-      let mentorEmailResolved = mentorRole?.email || null;
-      let mentorName = mentorRole?.email || "Mentor";
-      try {
-        const { data: authMentor } = await supabaseAdmin.auth.admin.getUserById(mentorUserId);
-        if (authMentor?.user) {
-          if (!mentorEmailResolved) {
-            mentorEmailResolved = authMentor.user.email || null;
-          }
-          mentorName =
-            authMentor.user.user_metadata?.full_name ||
-            authMentor.user.email ||
-            mentorName;
-        }
-      } catch (authErr) {
-        console.warn("[EmailActions] Failed to query auth mentor details:", authErr);
-      }
+      const targetMentorId = isValidUuid(venture.mentor_id)
+        ? venture.mentor_id
+        : isValidUuid(mentorUserId)
+        ? mentorUserId
+        : null;
 
-      const emailService = new EmailService();
-      const dashboardBaseUrl = process.env.APP_URL || "http://localhost:3000";
-
-      // 6. Calculate score percentage
-      const currentScoreVal = kpi.score !== null ? kpi.score : 0;
-      const currentPct = (currentScoreVal / kpi.total_grade) * 100;
-      const roundedPct = Math.round(currentPct);
-
-      // 7. Send notification to student (always)
-      if (studentEmail) {
-        try {
-          await emailService.sendKpiScoredStudentEmail(
-            studentEmail,
-            {
-              studentName: venture.student_name,
-              score: currentScoreVal,
-              totalMarks: kpi.total_grade,
-              percentage: roundedPct,
-              evaluationName: kpi.name,
-              dashboardUrl: `${dashboardBaseUrl}/result`,
-            },
-            venture.user_id || undefined
-          );
-        } catch (studErr: any) {
-          console.error(`[EmailActions] Error sending student email: ${studErr.message}`);
-        }
-      }
-
-      // 8. Resolve assigned Mentor's details
-      let assignedMentorEmail = mentorEmailResolved;
-      let assignedMentorName = mentorName;
-
-      if (venture.mentor_id && venture.mentor_id !== mentorUserId) {
+      if (targetMentorId) {
         const { data: vMentorRole } = await supabaseAdmin
           .from("user_roles")
           .select("email")
-          .eq("user_id", venture.mentor_id)
+          .eq("user_id", targetMentorId)
           .maybeSingle();
 
         if (vMentorRole?.email) {
           assignedMentorEmail = vMentorRole.email;
           assignedMentorName = vMentorRole.email;
-        } else {
-          // Fallback to query auth.users for the assigned mentor email
-          try {
-            const { data: authAssigned } = await supabaseAdmin.auth.admin.getUserById(venture.mentor_id);
-            if (authAssigned?.user?.email) {
-              assignedMentorEmail = authAssigned.user.email;
-              assignedMentorName = authAssigned.user.user_metadata?.full_name || authAssigned.user.email;
-            }
-          } catch (authErr) {
-            console.warn("[EmailActions] Failed to query assigned mentor auth details:", authErr);
+        }
+
+        try {
+          const { data: authAssigned } = await supabaseAdmin.auth.admin.getUserById(targetMentorId);
+          if (authAssigned?.user?.email) {
+            if (!assignedMentorEmail) assignedMentorEmail = authAssigned.user.email;
+            assignedMentorName =
+              authAssigned.user.user_metadata?.full_name ||
+              authAssigned.user.email ||
+              assignedMentorName;
           }
+        } catch (authErr) {
+          console.warn("[EmailActions] Failed to query mentor auth details:", authErr);
         }
       }
 
-      // 9. Performance Check Warnings
-      // Case A: Score <= 40% -> Alert Academic Board AND Mentor
-      if (currentPct <= 40) {
-        // Send to Academic Board members
-        if (boardEmails.length > 0) {
-          for (const boardEmail of boardEmails) {
+      // Fallback: If no mentor assigned to venture, fallback to any user with role 'mentor'
+      if (!assignedMentorEmail) {
+        const { data: fallbackMentor } = await supabaseAdmin
+          .from("user_roles")
+          .select("email")
+          .eq("role", "mentor")
+          .not("email", "is", null)
+          .limit(1)
+          .maybeSingle();
+
+        if (fallbackMentor?.email) {
+          assignedMentorEmail = fallbackMentor.email;
+          assignedMentorName = fallbackMentor.email;
+        }
+      }
+
+      console.log(`[EmailActions] Resolved mentor email: ${assignedMentorEmail}`);
+
+      const emailService = new EmailService();
+      const dashboardBaseUrl = process.env.APP_URL || "http://localhost:3000";
+
+      // 6. Calculate target KPI score percentage
+      const currentScoreVal = kpi.score !== null ? kpi.score : 0;
+      const currentPct = (currentScoreVal / kpi.total_grade) * 100;
+      const roundedPct = Math.round(currentPct);
+
+      // Helper function: Check if an email of a specific type has already been sent for this KPI
+      async function isAlreadySent(recipientEmail: string, type: string): Promise<boolean> {
+        try {
+          const { data: existing, error } = await supabaseAdmin
+            .from("email_notifications")
+            .select("id")
+            .eq("recipient_email", recipientEmail)
+            .eq("type", type as any)
+            .eq("status", "SENT")
+            .like("subject", `%[KPI:${kpiId}]%`)
+            .maybeSingle();
+
+          if (error) return false;
+          return !!existing;
+        } catch {
+          return false;
+        }
+      }
+
+      // 7. Student Email — ALWAYS sent on every locked evaluation
+      if (studentEmail) {
+        const studentAlreadySent = await isAlreadySent(studentEmail, "KPI_SCORED_STUDENT");
+        if (!studentAlreadySent) {
+          try {
+            await emailService.sendKpiScoredStudentEmail(
+              studentEmail,
+              {
+                studentName: venture.student_name,
+                score: currentScoreVal,
+                totalMarks: kpi.total_grade,
+                percentage: roundedPct,
+                evaluationName: `${kpi.name} [KPI:${kpiId}]`,
+                dashboardUrl: `${dashboardBaseUrl}/result`,
+              },
+              venture.user_id || undefined
+            );
+          } catch (studErr: unknown) {
+            const msg = studErr instanceof Error ? studErr.message : String(studErr);
+            console.error(`[EmailActions] Error sending student email: ${msg}`);
+          }
+        } else {
+          console.log(`[EmailActions] Student result email already sent for KPI ${kpiId}. Skipping.`);
+        }
+      }
+
+      // 9. Fetch ALL locked KPIs for this venture to compute consecutive strikes
+      const { data: allLockedKpis, error: fetchLockedErr } = await supabaseAdmin
+        .from("venture_kpis")
+        .select("id, name, score, total_grade, is_locked, locked_at, scored_at, created_at, due_date")
+        .eq("venture_id", ventureId)
+        .eq("is_locked", true)
+        .not("score", "is", null);
+
+      if (fetchLockedErr) {
+        console.error(`[EmailActions] Error fetching locked KPIs: ${fetchLockedErr.message}`);
+      }
+
+      // Sort chronologically: due_date > locked_at > scored_at > created_at > id
+      const sortedKpis = (allLockedKpis || []).sort((a, b) => {
+        const tA = new Date(a.due_date || a.locked_at || a.scored_at || a.created_at || 0).getTime();
+        const tB = new Date(b.due_date || b.locked_at || b.scored_at || b.created_at || 0).getTime();
+        if (tA !== tB) return tA - tB;
+        return a.id.localeCompare(b.id);
+      });
+
+      console.log(
+        `[EmailActions] Found ${sortedKpis.length} locked KPIs for venture ${ventureId}:`,
+        sortedKpis.map((k) => ({
+          id: k.id,
+          name: k.name,
+          score: k.score,
+          total: k.total_grade,
+          pct: k.score !== null ? (k.score / k.total_grade) * 100 : 0,
+        }))
+      );
+
+      let mentorStrikeCount = 0;
+      let boardStrikeCount = 0;
+      let triggerMentorEscalation = false;
+      let triggerBoardEscalation = false;
+
+      for (const item of sortedKpis) {
+        const itemScore = item.score !== null ? item.score : 0;
+        const itemTotal = item.total_grade || 100;
+        const itemPct = (itemScore / itemTotal) * 100;
+
+        if (itemPct <= 40) {
+          mentorStrikeCount += 1;
+          boardStrikeCount += 1;
+        } else if (itemPct > 40 && itemPct < 70) {
+          mentorStrikeCount += 1;
+          boardStrikeCount = 0;
+        } else {
+          mentorStrikeCount = 0;
+          boardStrikeCount = 0;
+        }
+
+        console.log(
+          `[EmailActions] KPI '${item.name}' (${item.id.slice(0, 8)}): score=${itemScore}/${itemTotal} (${itemPct.toFixed(1)}%) -> mentorStrikes=${mentorStrikeCount}, boardStrikes=${boardStrikeCount}`
+        );
+
+        if (mentorStrikeCount >= 2) {
+          if (item.id === kpiId) {
+            triggerMentorEscalation = true;
+          }
+          mentorStrikeCount = 0;
+        }
+
+        if (boardStrikeCount >= 2) {
+          if (item.id === kpiId) {
+            triggerBoardEscalation = true;
+          }
+          boardStrikeCount = 0;
+        }
+      }
+
+      console.log(
+        `[EmailActions] Strike status for KPI ${kpiId}: triggerMentor=${triggerMentorEscalation}, triggerBoard=${triggerBoardEscalation}`
+      );
+
+      // 10. Send Academic Board Alert on 2 Consecutive Board Strikes (<= 40%)
+      if (triggerBoardEscalation && boardEmails.length > 0) {
+        for (const boardEmail of boardEmails) {
+          const boardAlreadySent = await isAlreadySent(boardEmail, "CONSECUTIVE_LOW_SCORE_BOARD");
+          if (!boardAlreadySent) {
             try {
               await emailService.sendAcademicBoardLowScoreEmail(boardEmail, {
                 studentName: venture.student_name,
@@ -185,58 +292,58 @@ export const sendLockedKpiEmailsFn = createServerFn({ method: "POST" })
                 totalMarks: kpi.total_grade,
                 percentage: roundedPct,
                 mentorName: assignedMentorName,
-                evaluationName: kpi.name,
+                evaluationName: `${kpi.name} [KPI:${kpiId}]`,
                 dashboardUrl: `${dashboardBaseUrl}/result`,
               });
-            } catch (alertErr: any) {
-              console.error(
-                `[EmailActions] Error sending board low score alert to ${boardEmail}: ${alertErr.message}`
-              );
+            } catch (alertErr: unknown) {
+              const msg = alertErr instanceof Error ? alertErr.message : String(alertErr);
+              console.error(`[EmailActions] Error sending board alert to ${boardEmail}: ${msg}`);
             }
-          }
-        }
-
-        // Send to Mentor
-        if (assignedMentorEmail) {
-          try {
-            await emailService.sendMentorLowScoreEmail(assignedMentorEmail, {
-              studentName: venture.student_name,
-              score: currentScoreVal,
-              totalMarks: kpi.total_grade,
-              percentage: roundedPct,
-              evaluationName: kpi.name,
-              dashboardUrl: `${dashboardBaseUrl}/result`,
-            });
-          } catch (alertErr: any) {
-            console.error(
-              `[EmailActions] Error sending mentor low score alert: ${alertErr.message}`
-            );
+          } else {
+            console.log(`[EmailActions] Board alert already sent for KPI ${kpiId} to ${boardEmail}. Skipping.`);
           }
         }
       }
-      // Case B: Score > 40% and < 70% -> Alert Mentor to connect
-      else if (currentPct > 40 && currentPct < 70) {
-        if (assignedMentorEmail) {
+
+      // 11. Send Mentor Alert on 2 Consecutive Mentor Strikes (<= 40% or 40%-70%)
+      if (triggerMentorEscalation && assignedMentorEmail) {
+        const mentorType = currentPct <= 40 ? "CONSECUTIVE_LOW_SCORE_BOARD" : "CONSECUTIVE_MID_SCORE_MENTOR";
+        const mentorAlreadySent = await isAlreadySent(assignedMentorEmail, mentorType);
+
+        if (!mentorAlreadySent) {
           try {
-            await emailService.sendMentorFollowUpEmail(assignedMentorEmail, {
-              studentName: venture.student_name,
-              score: currentScoreVal,
-              totalMarks: kpi.total_grade,
-              percentage: roundedPct,
-              evaluationName: kpi.name,
-              dashboardUrl: `${dashboardBaseUrl}/result`,
-            });
-          } catch (alertErr: any) {
-            console.error(
-              `[EmailActions] Error sending mentor mid score connect alert: ${alertErr.message}`
-            );
+            if (currentPct <= 40) {
+              await emailService.sendMentorLowScoreEmail(assignedMentorEmail, {
+                studentName: venture.student_name,
+                score: currentScoreVal,
+                totalMarks: kpi.total_grade,
+                percentage: roundedPct,
+                evaluationName: `${kpi.name} [KPI:${kpiId}]`,
+                dashboardUrl: `${dashboardBaseUrl}/result`,
+              });
+            } else {
+              await emailService.sendMentorFollowUpEmail(assignedMentorEmail, {
+                studentName: venture.student_name,
+                score: currentScoreVal,
+                totalMarks: kpi.total_grade,
+                percentage: roundedPct,
+                evaluationName: `${kpi.name} [KPI:${kpiId}]`,
+                dashboardUrl: `${dashboardBaseUrl}/result`,
+              });
+            }
+          } catch (alertErr: unknown) {
+            const msg = alertErr instanceof Error ? alertErr.message : String(alertErr);
+            console.error(`[EmailActions] Error sending mentor alert: ${msg}`);
           }
+        } else {
+          console.log(`[EmailActions] Mentor alert already sent for KPI ${kpiId} to ${assignedMentorEmail}. Skipping.`);
         }
       }
 
       return { success: true };
-    } catch (err: any) {
-      console.error("[EmailActions] Critical error in sendLockedKpiEmailsFn:", err);
-      return { success: false, error: err.message || String(err) };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[EmailActions] Critical error in sendLockedKpiEmailsFn:", msg);
+      return { success: false, error: msg };
     }
   });

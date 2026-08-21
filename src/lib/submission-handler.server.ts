@@ -60,20 +60,22 @@ export async function processUploadSubmission(params: {
   }
 
   const token = (authHeader || "").replace(/^Bearer\s+/i, "");
+
+  if (!token) {
+    throw new Error("You must be signed in to submit evidence.");
+  }
+
   const supabase = createClient(supabaseUrl, supabaseKey, {
     auth: { persistSession: false },
-    global: token ? { headers: { Authorization: `Bearer ${token}` } } : undefined,
+    global: { headers: { Authorization: `Bearer ${token}` } },
   });
 
   let authUserId = studentId;
-  if (token) {
-    const { data: userData } = await supabase.auth.getUser(token);
-    if (userData?.user) {
-      authUserId = userData.user.id;
-    }
+  const { data: userData } = await supabase.auth.getUser(token);
+  if (userData?.user) {
+    authUserId = userData.user.id;
   }
 
-  console.log("kpiId", kpiId);
   // Fetch KPI details to enforce rules
   const { data: kpi, error: kpiErr } = await supabase
     .from("venture_kpis")
@@ -81,10 +83,13 @@ export async function processUploadSubmission(params: {
     .eq("id", kpiId)
     .single();
 
-  console.log("kpiId:", kpi);
-
   if (kpiErr || !kpi) {
-    throw new Error("Target KPI record not found.");
+    console.error("[Submission] venture_kpis lookup failed", { kpiId, kpiErr });
+    throw new Error(
+      kpiErr
+        ? `Target KPI record not found (${kpiErr.code || "unknown"}: ${kpiErr.message}).`
+        : "Target KPI record not found.",
+    );
   }
 
   if (kpi.is_locked || kpi.score !== null) {
@@ -167,9 +172,20 @@ export async function processUploadSubmission(params: {
     is_late: isLate,
   };
 
+  if (existingSub) {
+    const { error: replaceErr } = await supabase
+      .from("kpi_submissions")
+      .delete()
+      .eq("id", existingSub.id);
+
+    if (replaceErr) {
+      throw new Error(`Could not replace the previous submission: ${replaceErr.message}`);
+    }
+  }
+
   const { data: savedSubmission, error: saveErr } = await supabase
     .from("kpi_submissions")
-    .upsert(submissionPayload)
+    .insert(submissionPayload)
     .select()
     .single();
 
@@ -200,9 +216,14 @@ export async function processDownloadSubmission(params: {
   }
 
   const token = (authHeader || "").replace(/^Bearer\s+/i, "");
+
+  if (!token) {
+    throw new Error("You must be signed in to download evidence.");
+  }
+
   const supabase = createClient(supabaseUrl, supabaseKey, {
     auth: { persistSession: false },
-    global: token ? { headers: { Authorization: `Bearer ${token}` } } : undefined,
+    global: { headers: { Authorization: `Bearer ${token}` } },
   });
 
   let queryBuilder = supabase.from("kpi_submissions").select("*");
@@ -215,7 +236,12 @@ export async function processDownloadSubmission(params: {
   const { data: submission, error: subErr } = await queryBuilder.maybeSingle();
 
   if (subErr || !submission) {
-    throw new Error("Submission evidence file not found.");
+    console.error("[Submission] kpi_submissions lookup failed", { kpiId, submissionId, subErr });
+    throw new Error(
+      subErr
+        ? `Submission evidence file not found (${subErr.code || "unknown"}: ${subErr.message}).`
+        : "Submission evidence file not found.",
+    );
   }
 
   const downloadUrl = await getSignedDownloadUrl({

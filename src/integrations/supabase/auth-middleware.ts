@@ -23,14 +23,7 @@ export const requireSupabaseAuth = createMiddleware({ type: "function" }).server
     const authHeader = request?.headers?.get("authorization") || "";
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      // Omitted or invalid token: fall back to system context to avoid crashing server functions
-      return next({
-        context: {
-          supabase: null as any,
-          userId: "system",
-          claims: {},
-        },
-      });
+      throw new Error("Unauthorized");
     }
 
     const token = authHeader.replace("Bearer ", "");
@@ -48,12 +41,15 @@ export const requireSupabaseAuth = createMiddleware({ type: "function" }).server
     });
 
     const { data, error } = await supabase.auth.getClaims(token);
-    const userId = data?.claims?.sub || "system";
+    const userId = data?.claims?.sub;
+    if (error || !userId) {
+      throw new Error("Unauthorized");
+    }
 
     return next({
       context: {
         supabase,
-        userId: data.claims.sub,
+        userId,
         claims: data.claims,
       },
     });

@@ -5,12 +5,10 @@ import {
   ChevronDown,
   ChevronRight,
   Plus,
-  Sparkles,
   Trash2,
   Loader2,
   FolderPlus,
   Lock,
-  ShieldAlert,
   X,
   Pencil,
   Upload,
@@ -31,6 +29,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { KpiSubmissionModal, type KpiModalTarget } from "@/components/kpi/KpiSubmissionModal";
 import { canAddKpi, canEditKpi, canManageVentures, type Actor } from "@/lib/permissions";
+import { addKpiServerFn, editKpiServerFn, deleteKpiServerFn } from "@/lib/kpi.actions";
 
 interface ResultSearch {
   studentId?: string;
@@ -80,6 +79,7 @@ interface Venture {
   studentName: string;
   rollNo: string;
   mentorId: string | null;
+  userId: string | null;
   kpis: KPI[];
 }
 
@@ -252,6 +252,7 @@ function Page() {
           studentName: v.student_name,
           rollNo: v.roll_no || "",
           mentorId: v.mentor_id ?? null,
+          userId: v.user_id ?? null,
           kpis: vKpis,
         };
       });
@@ -385,96 +386,57 @@ function Page() {
         totalGrade: Number(s.totalGrade) || 10,
       }));
 
-    // A KPI is created unscored. It used to default to `${total}/${total}`, which
-    // awarded full marks to every new KPI before anyone had looked at it.
     const dueIso = kpiDueDate ? new Date(`${kpiDueDate}T23:59:59`).toISOString() : null;
 
     try {
       if (editingKpiId) {
-        const { error: kpiErr } = await supabase
-          .from("venture_kpis")
-          .update({
+        const res = await editKpiServerFn({
+          data: {
+            kpiId: editingKpiId,
+            ventureId: targetVentureId,
             name: kpiName.trim(),
-            total_grade: Number(kpiTotal) || 10,
-            due_date: dueIso,
-          })
-          .eq("id", editingKpiId);
+            totalGrade: Number(kpiTotal) || 10,
+            dueDate: dueIso,
+            subcategories: validSubgrades,
+          },
+        });
 
-        if (kpiErr) {
-          toast.error(`KPI update error: ${kpiErr.message}`);
-          return;
-        }
-
-        const { error: delErr } = await supabase
-          .from("kpi_subcategories")
-          .delete()
-          .eq("kpi_id", editingKpiId);
-        if (delErr) {
-          toast.error(`Could not replace subgrades: ${delErr.message}`);
-          return;
-        }
-
-        if (validSubgrades.length > 0) {
-          const { error: insErr } = await supabase.from("kpi_subcategories").insert(
-            validSubgrades.map((sub) => ({
-              kpi_id: editingKpiId,
-              name: sub.name,
-              total_grade: sub.totalGrade,
-            })),
-          );
-          if (insErr) {
-            toast.error(`Could not save subgrades: ${insErr.message}`);
-            return;
+        if (res && res.success) {
+          if (validSubgrades.length > 0) {
+            setOpenRows((prev) => ({ ...prev, [editingKpiId]: true }));
           }
-          setOpenRows((prev) => ({ ...prev, [editingKpiId]: true }));
+          setKpiModalOpen(false);
+          toast.success(`KPI "${kpiName.trim()}" updated.`);
+        } else {
+          toast.error(res?.error || "KPI update failed.");
+          return;
         }
-
-        setKpiModalOpen(false);
-        toast.success(`KPI "${kpiName.trim()}" updated.`);
       } else {
-        const { data: kpiInsertData, error: kpiErr } = await supabase
-          .from("venture_kpis")
-          .insert([
-            {
-              venture_id: targetVentureId,
-              name: kpiName.trim(),
-              total_grade: Number(kpiTotal) || 10,
-              due_date: dueIso,
-            },
-          ])
-          .select()
-          .single();
+        const res = await addKpiServerFn({
+          data: {
+            ventureId: targetVentureId,
+            name: kpiName.trim(),
+            totalGrade: Number(kpiTotal) || 10,
+            dueDate: dueIso,
+            subcategories: validSubgrades,
+          },
+        });
 
-        if (kpiErr) {
-          toast.error(`KPI insert error: ${kpiErr.message}`);
+        if (res && res.success && res.kpiId) {
+          if (validSubgrades.length > 0) {
+            setOpenRows((prev) => ({ ...prev, [res.kpiId]: true }));
+          }
+          setKpiModalOpen(false);
+          toast.success(`KPI "${kpiName.trim()}" added.`);
+        } else {
+          toast.error(res?.error || "KPI creation failed.");
           return;
         }
-
-        const createdKpiId = kpiInsertData.id;
-
-        if (validSubgrades.length > 0) {
-          const { error: insErr } = await supabase.from("kpi_subcategories").insert(
-            validSubgrades.map((sub) => ({
-              kpi_id: createdKpiId,
-              name: sub.name,
-              total_grade: sub.totalGrade,
-            })),
-          );
-          if (insErr) {
-            toast.error(`KPI created but subgrades failed: ${insErr.message}`);
-          } else {
-            setOpenRows((prev) => ({ ...prev, [createdKpiId]: true }));
-          }
-        }
-
-        setKpiModalOpen(false);
-        toast.success(`KPI "${kpiName.trim()}" added.`);
       }
 
       await fetchVentureData();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-
       toast.error(message || "Failed to save KPI");
     } finally {
       setSubmitting(false);
@@ -485,10 +447,14 @@ function Page() {
     if (!confirm(`Are you sure you want to delete KPI "${kpiNameStr}"?`)) return;
 
     try {
-      const { error } = await supabase.from("venture_kpis").delete().eq("id", kpiId);
-      if (error) {
-        toast.error(`Delete KPI error: ${error.message}`);
-      } else {
+      const res = await deleteKpiServerFn({
+        data: {
+          kpiId,
+          ventureId,
+        },
+      });
+
+      if (res && res.success) {
         toast.success(`KPI "${kpiNameStr}" deleted.`);
         setVentures((prev) =>
           prev.map((v) =>
@@ -500,10 +466,11 @@ function Page() {
               : v,
           ),
         );
+      } else {
+        toast.error(res?.error || "Delete KPI failed.");
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-
       toast.error(message || "Failed to delete KPI");
     }
   };
@@ -607,7 +574,7 @@ function Page() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {actor && canAddKpi(actor, venture.mentorId) && (
+                  {actor && canAddKpi(actor, venture.userId, venture.mentorId) && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -644,7 +611,7 @@ function Page() {
                   {venture.kpis.length === 0 ? (
                     <div className="p-6 text-center text-xs font-mono text-muted-foreground">
                       No KPIs added for this venture yet.
-                      {actor && canAddKpi(actor, venture.mentorId) && (
+                      {actor && canAddKpi(actor, venture.userId, venture.mentorId) && (
                         <span
                           className="mt-1 block cursor-pointer text-primary hover:underline"
                           onClick={() => handleOpenAddKpi(venture.id)}
@@ -660,6 +627,7 @@ function Page() {
                       );
                       const isOpen = Boolean(openRows[kpi.id]);
                       const kpiCtx = {
+                        ventureUserId: venture.userId,
                         ventureMentorId: venture.mentorId,
                         isLocked: kpi.isLocked,
                       };
@@ -743,7 +711,7 @@ function Page() {
                                 <span>{!canEdit ? "Upload Evidence" : "Review"}</span>
                               </button>
 
-                              {canEdit && (
+                              {(canEdit || mayEdit) && (
                                 <>
                                   <button
                                     type="button"
@@ -753,7 +721,7 @@ function Page() {
                                       handleOpenEditKpi(kpi, venture.id);
                                     }}
                                     className="cursor-pointer p-1 text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
-                                    title={mayEdit ? "Edit KPI" : "Locked or not your mentee"}
+                                    title={mayEdit ? "Edit KPI" : "Locked or not your KPI"}
                                   >
                                     <Pencil className="h-3.5 w-3.5" />
                                   </button>
@@ -765,7 +733,7 @@ function Page() {
                                       handleDeleteKpi(kpi.id, kpi.name, venture.id);
                                     }}
                                     className="cursor-pointer p-1 text-muted-foreground transition-colors hover:text-destructive disabled:cursor-not-allowed disabled:opacity-30"
-                                    title={mayEdit ? "Delete KPI" : "Locked or not your mentee"}
+                                    title={mayEdit ? "Delete KPI" : "Locked or not your KPI"}
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
                                   </button>

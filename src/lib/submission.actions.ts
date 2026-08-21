@@ -49,6 +49,10 @@ export const downloadSubmissionServerFn = createServerFn({ method: "GET" })
   )
   .handler(async ({ data }) => {
     try {
+      const { getRequest } = await import("@tanstack/react-start/server");
+      const request = getRequest();
+      const authHeader = request?.headers?.get("authorization") || undefined;
+
       return await processDownloadSubmission({
         kpiId: data.kpiId,
         submissionId: data.submissionId,

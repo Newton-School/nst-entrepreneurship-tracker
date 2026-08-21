@@ -17,8 +17,6 @@ export const sendLockedKpiEmailsFn = createServerFn({ method: "POST" })
       const { EmailService } = await import("./email.service");
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-      console.log(`[EmailActions] Triggering notifications for KPI ${kpiId} and Venture ${ventureId}`);
-
       // 1. Fetch KPI details
       const { data: kpi, error: kpiErr } = await supabaseAdmin
         .from("venture_kpis")
@@ -148,8 +146,6 @@ export const sendLockedKpiEmailsFn = createServerFn({ method: "POST" })
         }
       }
 
-      console.log(`[EmailActions] Resolved mentor email: ${assignedMentorEmail}`);
-
       const emailService = new EmailService();
       const dashboardBaseUrl = process.env.APP_URL || "http://localhost:3000";
 
@@ -223,17 +219,6 @@ export const sendLockedKpiEmailsFn = createServerFn({ method: "POST" })
         return a.id.localeCompare(b.id);
       });
 
-      console.log(
-        `[EmailActions] Found ${sortedKpis.length} locked KPIs for venture ${ventureId}:`,
-        sortedKpis.map((k) => ({
-          id: k.id,
-          name: k.name,
-          score: k.score,
-          total: k.total_grade,
-          pct: k.score !== null ? (k.score / k.total_grade) * 100 : 0,
-        }))
-      );
-
       let mentorStrikeCount = 0;
       let boardStrikeCount = 0;
       let triggerMentorEscalation = false;
@@ -255,10 +240,6 @@ export const sendLockedKpiEmailsFn = createServerFn({ method: "POST" })
           boardStrikeCount = 0;
         }
 
-        console.log(
-          `[EmailActions] KPI '${item.name}' (${item.id.slice(0, 8)}): score=${itemScore}/${itemTotal} (${itemPct.toFixed(1)}%) -> mentorStrikes=${mentorStrikeCount}, boardStrikes=${boardStrikeCount}`
-        );
-
         if (mentorStrikeCount >= 2) {
           if (item.id === kpiId) {
             triggerMentorEscalation = true;
@@ -273,10 +254,6 @@ export const sendLockedKpiEmailsFn = createServerFn({ method: "POST" })
           boardStrikeCount = 0;
         }
       }
-
-      console.log(
-        `[EmailActions] Strike status for KPI ${kpiId}: triggerMentor=${triggerMentorEscalation}, triggerBoard=${triggerBoardEscalation}`
-      );
 
       // 10. Send Academic Board Alert on 2 Consecutive Board Strikes (<= 40%)
       if (triggerBoardEscalation && boardEmails.length > 0) {
@@ -299,8 +276,6 @@ export const sendLockedKpiEmailsFn = createServerFn({ method: "POST" })
               const msg = alertErr instanceof Error ? alertErr.message : String(alertErr);
               console.error(`[EmailActions] Error sending board alert to ${boardEmail}: ${msg}`);
             }
-          } else {
-            console.log(`[EmailActions] Board alert already sent for KPI ${kpiId} to ${boardEmail}. Skipping.`);
           }
         }
       }
@@ -335,8 +310,6 @@ export const sendLockedKpiEmailsFn = createServerFn({ method: "POST" })
             const msg = alertErr instanceof Error ? alertErr.message : String(alertErr);
             console.error(`[EmailActions] Error sending mentor alert: ${msg}`);
           }
-        } else {
-          console.log(`[EmailActions] Mentor alert already sent for KPI ${kpiId} to ${assignedMentorEmail}. Skipping.`);
         }
       }
 

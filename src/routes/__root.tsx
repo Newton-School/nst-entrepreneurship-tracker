@@ -3,15 +3,18 @@ import {
   Outlet,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
+  Navigate,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
 import { Toaster } from "sonner";
+import { Loader2 } from "lucide-react";
 
 import appCss from "../styles.css?url";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { AuthProvider } from "@/lib/auth";
+import { AuthProvider, useAuth } from "@/lib/auth";
 
 function NotFoundComponent() {
   return (
@@ -126,27 +129,96 @@ function RootShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+const PUBLIC_AUTH_ROUTES = ["/signin", "/auth", "/forgot-password", "/reset-password"];
+
+function AppLayout() {
+  const { user, status } = useAuth();
+  const routerState = useRouterState();
+  const pathname = routerState.location.pathname;
+
+  const isPublicAuthRoute = PUBLIC_AUTH_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(route + "/")
+  );
+
+  // During initial auth check, show clean loader so content doesn't flash
+  if (status === "loading") {
+    return (
+      <div className="flex min-h-screen w-full items-center justify-center bg-background">
+        <div className="relative flex flex-col items-center gap-3 text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
+            Authenticating...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Not signed in
+  if (!user || status === "signedOut") {
+    // Attempting to access a protected route
+    if (!isPublicAuthRoute) {
+      return <Navigate to="/signin" replace />;
+    }
+
+    // On sign-in and public auth routes: ONLY the form is visible! No sidebar, no header, no triggers!
+    return (
+      <div className="relative flex min-h-screen w-full flex-col items-center justify-center bg-background">
+        <div className="pointer-events-none absolute inset-0 grid-bg opacity-30" />
+        <div className="relative w-full">
+          <Outlet />
+        </div>
+        <Toaster theme="dark" position="top-right" />
+      </div>
+    );
+  }
+
+  // Already signed in, but visiting /signin or /auth -> redirect to home
+  if (pathname === "/signin" || pathname === "/auth") {
+    return <Navigate to="/" replace />;
+  }
+
+  // Signed in, on a public auth route (e.g. /forgot-password or /reset-password)
+  if (isPublicAuthRoute) {
+    return (
+      <div className="relative flex min-h-screen w-full flex-col items-center justify-center bg-background">
+        <div className="pointer-events-none absolute inset-0 grid-bg opacity-30" />
+        <div className="relative w-full">
+          <Outlet />
+        </div>
+        <Toaster theme="dark" position="top-right" />
+      </div>
+    );
+  }
+
+  // Signed in on standard app pages -> show full layout with sidebar
+  return (
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full">
+        <AppSidebar />
+        <div className="relative flex min-h-screen flex-1 flex-col">
+          <div className="pointer-events-none absolute inset-0 grid-bg opacity-40" />
+          <div className="absolute left-3 top-3 z-50 md:hidden">
+            <SidebarTrigger className="glass rounded-md" />
+          </div>
+          <div className="relative flex flex-1 flex-col">
+            <Outlet />
+          </div>
+        </div>
+      </div>
+      <Toaster theme="dark" position="top-right" />
+    </SidebarProvider>
+  );
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <SidebarProvider>
-          <div className="flex min-h-screen w-full">
-            <AppSidebar />
-            <div className="relative flex min-h-screen flex-1 flex-col">
-              <div className="pointer-events-none absolute inset-0 grid-bg opacity-40" />
-              <div className="absolute left-3 top-3 z-50 md:hidden">
-                <SidebarTrigger className="glass rounded-md" />
-              </div>
-              <div className="relative flex flex-1 flex-col">
-                <Outlet />
-              </div>
-            </div>
-          </div>
-          <Toaster theme="dark" position="top-right" />
-        </SidebarProvider>
+        <AppLayout />
       </AuthProvider>
     </QueryClientProvider>
   );
 }
+

@@ -105,7 +105,7 @@ function ForgotPasswordPage() {
         )}
 
         <Link
-          to="/auth"
+          to="/signin"
           className="mt-6 block text-center font-mono text-[11px] text-muted-foreground hover:text-foreground"
         >
           ← Back to sign in

@@ -55,7 +55,7 @@ function ResetPasswordPage() {
       await supabase.auth.signOut({ scope: "global" }).catch(() => {});
 
       toast.success("Password updated. Sign in with your new password.");
-      navigate({ to: "/auth" });
+      navigate({ to: "/signin" });
     } catch {
       toast.error("Could not update the password. Try again.");
     } finally {
@@ -146,7 +146,7 @@ function ResetPasswordPage() {
         )}
 
         <Link
-          to="/auth"
+          to="/signin"
           className="mt-6 block text-center font-mono text-[11px] text-muted-foreground hover:text-foreground"
         >
           ← Back to sign in

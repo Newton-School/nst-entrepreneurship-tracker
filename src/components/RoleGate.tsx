@@ -41,7 +41,7 @@ export function RoleGate({ children, allow }: { children: ReactNode; allow?: Rol
         title="Sign In Required"
         body="This page is part of the evaluation portal. Sign in to continue."
         action={
-          <Link to="/auth">
+          <Link to="/signin">
             <Button className="font-mono text-xs uppercase tracking-wider">Sign In</Button>
           </Link>
         }

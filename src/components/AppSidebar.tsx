@@ -293,10 +293,10 @@ export function AppSidebar() {
             </div>
           ) : (
             <Link
-              to="/auth"
+              to="/signin"
               className="flex items-center justify-center gap-2 h-8 w-full rounded-lg bg-primary/10 px-3 font-mono text-xs text-primary hover:bg-primary/20 transition-colors"
             >
-              <LogIn className="h-3.5 w-3.5" /> Sign in · admin access
+              <LogIn className="h-3.5 w-3.5" /> Sign in
             </Link>
           )}
         </div>

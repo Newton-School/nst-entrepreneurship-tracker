@@ -17,7 +17,7 @@ WORKDIR /app
 FROM base AS deps
 COPY package.json package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci
+    npm ci || npm install
 
 # ---------------------------------------------------
 # Stage 3: Dev server -- `docker compose --profile dev up app-dev`

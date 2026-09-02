@@ -96,12 +96,8 @@ export async function processUploadSubmission(params: {
     throw new Error("Submission is locked or scored. Editing is disabled.");
   }
 
-  if (kpi.due_date) {
-    const dueDateObj = new Date(kpi.due_date);
-    if (!Number.isNaN(dueDateObj.getTime()) && new Date() > dueDateObj) {
-      throw new Error("Submission editing closed after the deadline.");
-    }
-  }
+  const dueDate = kpi.due_date ? new Date(kpi.due_date) : null;
+  const isLate = dueDate !== null && !Number.isNaN(dueDate.getTime()) && new Date() > dueDate;
 
   // Fetch existing submission record if available
   const { data: existingSub } = await supabase
@@ -155,8 +151,6 @@ export async function processUploadSubmission(params: {
   } else if (!existingSub) {
     throw new Error("Please select an evidence file to upload.");
   }
-
-  const isLate = kpi.due_date ? new Date() > new Date(kpi.due_date) : false;
 
   const submissionPayload = {
     id: submissionId,

@@ -200,7 +200,7 @@ export function KpiSubmissionModal({
   );
 
   const isScoredOrLocked = target.isLocked || target.score !== null;
-  const canStudentEdit = isStudentView && !isScoredOrLocked && !isDueDatePassed;
+  const canStudentEdit = isStudentView && !isScoredOrLocked;
 
   const ctx = {
     ventureMentorId: target.ventureMentorId,
@@ -454,12 +454,22 @@ export function KpiSubmissionModal({
                   <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
                     Submitted Evidence
                   </span>
-                  <Badge
-                    variant="outline"
-                    className="font-mono text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                  >
-                    <CheckCircle2 className="mr-1 h-3 w-3" /> Submitted
-                  </Badge>
+                  <div className="flex items-center gap-1.5">
+                    <Badge
+                      variant="outline"
+                      className="font-mono text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                    >
+                      <CheckCircle2 className="mr-1 h-3 w-3" /> Submitted
+                    </Badge>
+                    {submission.is_late && (
+                      <Badge
+                        variant="outline"
+                        className="font-mono text-[10px] bg-amber-500/10 text-amber-300 border-amber-500/30"
+                      >
+                        <AlertCircle className="mr-1 h-3 w-3" /> Late
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center justify-between gap-3 bg-background/40 p-3 rounded-lg border border-border/30">
                   <div className="flex items-center gap-2.5 min-w-0">
@@ -529,6 +539,16 @@ export function KpiSubmissionModal({
           ) : (
             /* --- 2. UPLOAD / EDIT FORM VIEW --- */
             <form onSubmit={handleSubmitSubmission} className="space-y-5 py-2">
+              {isDueDatePassed && (
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 flex items-center gap-2 font-mono text-xs text-amber-300">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>
+                    The due date has passed. You can still submit, but this evidence will be marked
+                    late.
+                  </span>
+                </div>
+              )}
+
               {/* File Upload Area */}
               <div className="space-y-2">
                 <Label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
